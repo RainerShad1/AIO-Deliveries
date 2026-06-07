@@ -1,0 +1,174 @@
+// Prisma schema - Plataforma multi-negocio (multi-tenant)
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLIENTE      // cliente final, GLOBAL: una cedula sirve para todos los negocios
+  ADMIN        // dueno/admin de UN negocio (lleva businessId)
+  SUPER_ADMIN  // dueno de la plataforma, ve y administra todos los negocios
+}
+
+enum OrderStatus {
+  ENVIADO     // pedido enviado
+  EN_CAMINO   // en camino
+  ENTREGADO   // entregado
+  CANCELADO
+}
+
+// ====================================================================
+// ENTIDAD CENTRAL DEL MULTI-TENANT
+// Cada negocio (restaurante, colmado, farmacia) es un Business.
+// Su branding (logo, colores, nombre) vive aqui y se aplica dinamicamente.
+// El horario/abierto-cerrado, que antes era una fila unica global
+// (BusinessConfig id=1), ahora vive POR negocio dentro de esta entidad.
+// ====================================================================
+model Business {
+  id        String   @id @default(uuid())
+  slug      String   @unique          // identificador en URL: /n/super-empanada
+  nombre    String                     // "Super Empanada El Meneo"
+  activo    Boolean  @default(true)    // el super-admin puede suspender un negocio
+
+  // --- Branding por negocio (Fase 2 lo consumira en el frontend) ---
+  logo      String?                    // url o ruta del logo
+  colorPrimary String @default("#FFD400")
+  colorBg      String @default("#0B0B0F")
+  colorCard    String @default("#15151D")
+  colorAccent  String @default("#E53935")
+
+  // --- Horario del negocio (antes era el singleton BusinessConfig) ---
+  horaApertura String  @default("09:00")  // formato HH:mm
+  horaCierre   String  @default("22:00")
+  abierto      Boolean @default(true)     // override manual de cierre
+
+  // --- Numeracion de pedidos POR negocio ---
+  // Contador propio para que PED-000001 sea independiente en cada negocio.
+  orderSeq   Int      @default(0)
+
+  // --- Relaciones (todo lo que pertenece a este negocio) ---
+  admins     User[]      @relation("BusinessAdmins")
+  products   Product[]
+  categories Category[]
+  deliveries Delivery[]
+  orders     Order[]
+
+  createdAt  DateTime @default(now())
+}
+
+model User {
+  id        String    @id @default(uuid())
+  cedula    String    @unique          // unica GLOBAL, validada con formato dominicano
+  password  String                     // hash bcrypt
+  nombre    String
+  telefono  String
+  role      Role      @default(CLIENTE)
+
+  // Solo los ADMIN pertenecen a un negocio. CLIENTE y SUPER_ADMIN -> null.
+  business   Business? @relation("BusinessAdmins", fields: [businessId], references: [id])
+  businessId String?
+
+  addresses Address[]
+  orders    Order[]
+  createdAt DateTime  @default(now())
+
+  @@index([businessId])
+}
+
+// Address NO lleva businessId: una direccion pertenece al cliente (global),
+// no a un negocio. El cliente reutiliza sus direcciones en cualquier negocio.
+model Address {
+  id        String   @id @default(uuid())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  etiqueta  String   // "Casa", "Trabajo"
+  direccion String
+  lat       Float?
+  lng       Float?
+  activa    Boolean  @default(true) // soft delete: false = oculta de la lista
+  createdAt DateTime @default(now())
+  orders    Order[]
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  nombre    String
+  orden     Int       @default(0) // para ordenar las pestanas
+  activa    Boolean   @default(true)
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String
+  products  Product[]
+  createdAt DateTime  @default(now())
+
+  // nombre unico DENTRO del negocio (antes era unico global). Dos negocios
+  // pueden tener ambos una categoria "Bebidas".
+  @@unique([businessId, nombre])
+  @@index([businessId])
+}
+
+model Product {
+  id          String      @id @default(uuid())
+  nombre      String
+  descripcion String
+  imagen      String
+  precio      Decimal     @db.Decimal(10, 2)
+  activo      Boolean     @default(true)
+  business    Business    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId  String
+  category    Category?   @relation(fields: [categoryId], references: [id])
+  categoryId  String?
+  items       OrderItem[]
+  createdAt   DateTime    @default(now())
+
+  @@index([businessId])
+}
+
+model Delivery {
+  id        String   @id @default(uuid())
+  nombre    String
+  telefono  String   // para wa.me
+  activo    Boolean  @default(true)
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String
+  orders    Order[]
+
+  @@index([businessId])
+}
+
+model Order {
+  id         String      @id @default(uuid())
+  numero     String                      // PED-000001 (unico POR negocio, ver @@unique)
+  business    Business   @relation(fields: [businessId], references: [id])
+  businessId String
+  user       User        @relation(fields: [userId], references: [id])
+  userId     String
+  address    Address     @relation(fields: [addressId], references: [id])
+  addressId  String
+  delivery   Delivery?   @relation(fields: [deliveryId], references: [id])
+  deliveryId String?
+  status     OrderStatus @default(ENVIADO)
+  nota       String?
+  total      Decimal     @db.Decimal(10, 2)
+  items      OrderItem[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  // El numero de pedido es unico dentro del negocio, no global.
+  @@unique([businessId, numero])
+  @@index([businessId])
+  @@index([userId])
+}
+
+model OrderItem {
+  id         String  @id @default(uuid())
+  order      Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId    String
+  product    Product @relation(fields: [productId], references: [id])
+  productId  String
+  cantidad   Int
+  precioUnit Decimal @db.Decimal(10, 2) // snapshot del precio al momento del pedido
+}

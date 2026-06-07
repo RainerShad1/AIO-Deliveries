@@ -1,0 +1,182 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ===== Branding dinamico (variables por negocio) =====
+   Valores por defecto = paleta base de la plataforma. Al entrar a la
+   tienda de un negocio, applyBranding() sobreescribe estas variables con sus
+   colores. Asi todos los bg-primary/text-primary se reciclan sin cambiar JSX. */
+:root {
+  --color-primary: #ffd400;
+  --color-primary-dark: #e6bf00;
+  --color-bg: #0b0b0f;
+  --color-card: #15151d;
+  --color-accent: #e53935;
+}
+
+html,
+body {
+  background: var(--color-bg);
+  color: #f5f5f7;
+  -webkit-tap-highlight-color: transparent;
+  /* transicion suave al cambiar de negocio */
+  transition: background-color 0.3s ease;
+}
+
+/* Botones grandes touch-friendly */
+.btn-primary {
+  @apply bg-primary active:bg-primary-dark text-black font-bold
+         rounded-xl py-4 px-6 text-base w-full transition
+         disabled:opacity-50 disabled:pointer-events-none;
+}
+.input {
+  @apply bg-card border border-white/10 rounded-xl py-3.5 px-4 w-full
+         text-white placeholder:text-muted focus:border-primary outline-none;
+}
+
+/* ===== Animaciones ===== */
+
+/* Aparecer desde abajo con fade (tarjetas, listas) */
+@keyframes fadeInUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in-up {
+  animation: fadeInUp 0.4s ease both;
+}
+
+/* Fade simple */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-fade-in {
+  animation: fadeIn 0.3s ease both;
+}
+
+/* Slide-up para hojas/modales (carrito) */
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.animate-slide-up {
+  animation: slideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* Fondo oscuro que aparece */
+@keyframes overlayIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.animate-overlay-in {
+  animation: overlayIn 0.25s ease both;
+}
+
+/* Pop/rebote para el boton de agregar y badges */
+@keyframes pop {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+.animate-pop {
+  animation: pop 0.3s ease;
+}
+
+/* Pulso suave (badge del carrito) */
+@keyframes pulseOnce {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.18); }
+  100% { transform: scale(1); }
+}
+.animate-pulse-once {
+  animation: pulseOnce 0.35s ease;
+}
+
+/* Brillo de carga (skeletons) */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(90deg, #22222b 25%, #2c2c36 50%, #22222b 75%);
+  background-size: 800px 100%;
+  animation: shimmer 1.4s infinite linear;
+}
+
+/* Util para escalonar la aparicion (delay por indice) */
+.stagger > * { opacity: 0; animation: fadeInUp 0.4s ease forwards; }
+.stagger > *:nth-child(1) { animation-delay: 0.04s; }
+.stagger > *:nth-child(2) { animation-delay: 0.08s; }
+.stagger > *:nth-child(3) { animation-delay: 0.12s; }
+.stagger > *:nth-child(4) { animation-delay: 0.16s; }
+.stagger > *:nth-child(5) { animation-delay: 0.20s; }
+.stagger > *:nth-child(6) { animation-delay: 0.24s; }
+.stagger > *:nth-child(7) { animation-delay: 0.28s; }
+.stagger > *:nth-child(8) { animation-delay: 0.32s; }
+
+/* ===== Animacion de "Pedido confirmado" ===== */
+
+/* El circulo principal aparece con rebote */
+@keyframes checkPop {
+  0%   { transform: scale(0); opacity: 0; }
+  60%  { transform: scale(1.15); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-check-pop {
+  animation: checkPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+/* El "palomito" se dibuja */
+@keyframes drawCheck {
+  from { stroke-dashoffset: 30; }
+  to   { stroke-dashoffset: 0; }
+}
+.check-path {
+  stroke-dasharray: 30;
+  stroke-dashoffset: 30;
+  animation: drawCheck 0.4s ease 0.35s forwards;
+}
+
+/* Anillo que se expande y desvanece */
+@keyframes ringExpand {
+  0%   { transform: scale(1); opacity: 0.7; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.animate-ring {
+  animation: ringExpand 1s ease-out 0.3s infinite;
+}
+
+/* Ocultar scrollbar (pestanas de categorias) */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Respeta la preferencia de accesibilidad: sin animaciones */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+/* FASE 5: estilos de impresion de ticket */
+@media print {
+  aside,
+  nav,
+  button {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+  }
+  .bg-card {
+    background: white !important;
+    border: 1px solid #ddd;
+  }
+}

@@ -1,0 +1,33 @@
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { PrismaService } from '../prisma/prisma.service';
+
+// El horario/abierto-cerrado ahora vive POR negocio dentro de Business.
+// Este servicio opera siempre sobre un businessId concreto (el del admin).
+@Injectable()
+export class BusinessConfigService {
+  constructor(private prisma: PrismaService) {}
+
+  // Devuelve el horario del negocio + si esta abierto ahora mismo.
+  async get(businessId: string) {
+    const biz = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        horaApertura: true,
+        horaCierre: true,
+        abierto: true,
+      },
+    });
+    if (!biz) throw new NotFoundException('Negocio no encontrado');
+    const hhmm = new Date().toTimeString().slice(0, 5);
+    const abiertoAhora =
+      biz.abierto && hhmm >= biz.horaApertura && hhmm <= biz.horaCierre;
+    return { ...biz, abiertoAhora };
+  }
+
+  update(
+    businessId: string,
+    data: Partial<{ horaApertura: string; horaCierre: string; abierto: boolean }>,
+  ) {
+    return this.prisma.business.update({ where: { id: businessId }, data });
+  }
+}
