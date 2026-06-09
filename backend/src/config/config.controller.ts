@@ -9,6 +9,7 @@ import {
 } from '../common/decorators/current-user.decorator';
 import { BusinessConfigService } from './config.service';
 import { BusinessService } from '../business/business.service';
+import { BrandingDto } from './branding.dto';
 
 @Controller('config')
 export class ConfigController {
@@ -35,5 +36,20 @@ export class ConfigController {
     body: Partial<{ horaApertura: string; horaCierre: string; abierto: boolean }>,
   ) {
     return this.config.update(user.businessId!, body);
+  }
+
+  // Admin: branding de SU negocio (banner, logo, colores)
+  @Get('branding')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  getBranding(@CurrentUser() user: AuthUser) {
+    return this.config.getBranding(user.businessId!);
+  }
+
+  @Patch('branding')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.ADMIN)
+  updateBranding(@CurrentUser() user: AuthUser, @Body() body: BrandingDto) {
+    return this.config.updateBranding(user.businessId!, body);
   }
 }

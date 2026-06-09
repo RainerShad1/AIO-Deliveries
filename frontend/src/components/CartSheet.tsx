@@ -6,6 +6,7 @@ import { useAuth } from '@/store/auth';
 import { api } from '@/lib/api';
 import type { Address, Order } from '@/types';
 import OrderConfirmed from '@/components/OrderConfirmed';
+import AuthModal from '@/components/AuthModal';
 
 export default function CartSheet({
   open,
@@ -32,29 +33,34 @@ export default function CartSheet({
   // Animacion de "Pedido confirmado": guarda el id del pedido recien creado
   const [confirmedId, setConfirmedId] = useState<string | null>(null);
   const [confirmedNumero, setConfirmedNumero] = useState<string>('');
+  const [authOpen, setAuthOpen] = useState(false);
+
+  // Carga direcciones del cliente y revisa pedidos activos (requiere sesion)
+  const cargarDatosCliente = () => {
+    api<Address[]>('/users/me/addresses')
+      .then((a) => {
+        setAddresses(a);
+        if (a[0]) setAddressId(a[0].id);
+      })
+      .catch(() => {});
+
+    api<Order[]>('/orders/mine')
+      .then((orders) => {
+        const activos = orders.filter((o) =>
+          ['ENVIADO', 'EN_CAMINO'].includes(o.status),
+        );
+        setPedidosActivos(activos.length);
+      })
+      .catch(() => {});
+
+    setConfirmarOtro(false);
+  };
 
   useEffect(() => {
     if (open && token) {
-      api<Address[]>('/users/me/addresses')
-        .then((a) => {
-          setAddresses(a);
-          if (a[0]) setAddressId(a[0].id);
-        })
-        .catch(() => {});
-
-      // Revisar si el cliente ya tiene pedidos en proceso
-      api<Order[]>('/orders/mine')
-        .then((orders) => {
-          const activos = orders.filter((o) =>
-            ['ENVIADO', 'EN_CAMINO'].includes(o.status),
-          );
-          setPedidosActivos(activos.length);
-        })
-        .catch(() => {});
-
-      // Reset del aviso cada vez que se abre
-      setConfirmarOtro(false);
+      cargarDatosCliente();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, token]);
 
   // Crea el pedido de verdad
@@ -84,16 +90,14 @@ export default function CartSheet({
     }
   };
 
-  // Al tocar "Confirmar pedido": si no hay sesion, mandamos a crear cuenta
-  // (guardando el negocio para volver a su tienda). Si hay activos y aun no
-  // confirmo, mostramos el aviso. Si no, enviamos.
+  // Al tocar "Iniciar sesion para pedir": abrimos el modal flotante de auth,
+  // sin salir del carrito. Guardamos el negocio por si acaso (p.ej. refresh).
   const handleConfirmar = () => {
     if (!token) {
       if (typeof window !== 'undefined') {
         sessionStorage.setItem('return_to_business', businessSlug);
       }
-      onClose();
-      router.push('/register');
+      setAuthOpen(true);
       return;
     }
     if (pedidosActivos > 0 && !confirmarOtro) {
@@ -101,6 +105,13 @@ export default function CartSheet({
       return;
     }
     enviarPedido();
+  };
+
+  // Tras login/registro exitoso en el modal: cerrar modal y quedarse en el
+  // carrito, ya con sesion. Cargamos sus direcciones para que pueda pedir.
+  const handleAuthSuccess = () => {
+    setAuthOpen(false);
+    cargarDatosCliente();
   };
 
   if (!open) return null;
@@ -119,10 +130,11 @@ export default function CartSheet({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end bg-black/60 animate-overlay-in"
-      onClick={onClose}
-    >
+    <>
+      <div
+        className="fixed inset-0 z-50 flex items-end bg-black/60 animate-overlay-in"
+        onClick={onClose}
+      >
       <div
         className="bg-surface w-full rounded-t-2xl p-5 max-h-[85vh] overflow-y-auto animate-slide-up"
         onClick={(e) => e.stopPropagation()}
@@ -238,6 +250,13 @@ export default function CartSheet({
           </button>
         )}
       </div>
-    </div>
+      </div>
+
+      <AuthModal
+        open={authOpen}
+        onClose={() => setAuthOpen(false)}
+        onSuccess={handleAuthSuccess}
+      />
+    </>
   );
 }

@@ -18,7 +18,7 @@ Plataforma web tipo PedidosYa/Uber Eats donde varios negocios (restaurantes, col
 ## Estructura del proyecto
 
 ```
-aio-deliverys/
+deliveries/
 ├── backend/          # API NestJS + Prisma + Socket.IO
 │   ├── prisma/       # schema.prisma + seed.ts
 │   └── src/

@@ -64,6 +64,62 @@ export default function Negocios() {
           <div className="space-y-3 stagger">
             {businesses.map((b) => {
               const open = abiertoAhora(b);
+              const horario = `${to12h(b.horaApertura)}-${to12h(b.horaCierre)}`;
+              // Con banner: tarjeta tipo portada con imagen + degradado oscuro.
+              if (b.bannerUrl) {
+                return (
+                  <button
+                    key={b.id}
+                    onClick={() => entrar(b)}
+                    className="w-full text-left rounded-2xl overflow-hidden border border-white/10 relative h-32 transition active:scale-[0.99]"
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={b.bannerUrl}
+                      alt=""
+                      aria-hidden="true"
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
+                    {/* Degradado: transparente arriba -> oscuro abajo (legible) */}
+                    <span
+                      className="absolute inset-0"
+                      style={{
+                        background:
+                          'linear-gradient(to bottom, rgba(11,11,15,0.15) 0%, rgba(11,11,15,0.55) 45%, rgba(11,11,15,0.92) 100%)',
+                      }}
+                    />
+                    {/* Franja de color del negocio */}
+                    <span
+                      className="absolute left-1.5 top-1.5 bottom-1.5 w-1.5 rounded-full"
+                      style={{ background: b.colorPrimary }}
+                    />
+                    <div className="absolute inset-x-0 bottom-0 p-3 pl-4 flex items-center justify-between">
+                      <div className="min-w-0">
+                        <p className="font-bold text-white truncate">
+                          {b.nombre}
+                        </p>
+                        <div className="flex items-center gap-3 text-xs mt-1">
+                          <span className="flex items-center gap-1">
+                            <span
+                              className={`inline-block w-1.5 h-1.5 rounded-full ${
+                                open ? 'bg-green-400' : 'bg-red-400'
+                              }`}
+                            />
+                            <span className="text-gray-200">
+                              {open ? 'Abierto' : 'Cerrado'}
+                            </span>
+                          </span>
+                          <span className="flex items-center gap-1 text-gray-300">
+                            <Clock size={11} /> {horario}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronRight size={20} className="text-gray-300 shrink-0" />
+                    </div>
+                  </button>
+                );
+              }
+              // Sin banner: respaldo con inicial + color (tarjeta original).
               return (
                 <button
                   key={b.id}
@@ -71,13 +127,11 @@ export default function Negocios() {
                   className="w-full text-left rounded-2xl overflow-hidden border border-white/10 flex items-stretch transition active:scale-[0.99]"
                   style={{ background: b.colorCard }}
                 >
-                  {/* Franja de color del negocio */}
                   <span
                     className="w-1.5 shrink-0"
                     style={{ background: b.colorPrimary }}
                   />
                   <div className="flex items-center gap-3 p-3 flex-1 min-w-0">
-                    {/* Logo o inicial */}
                     {b.logo ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
@@ -107,8 +161,7 @@ export default function Negocios() {
                           </span>
                         </span>
                         <span className="flex items-center gap-1 text-muted">
-                          <Clock size={11} /> {to12h(b.horaApertura)}-
-                          {to12h(b.horaCierre)}
+                          <Clock size={11} /> {horario}
                         </span>
                       </div>
                     </div>

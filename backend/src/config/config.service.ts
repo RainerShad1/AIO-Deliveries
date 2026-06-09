@@ -30,4 +30,37 @@ export class BusinessConfigService {
   ) {
     return this.prisma.business.update({ where: { id: businessId }, data });
   }
+
+  // Branding editable por el admin del negocio (banner, logo, colores).
+  async getBranding(businessId: string) {
+    const biz = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: {
+        nombre: true,
+        slug: true,
+        logo: true,
+        bannerUrl: true,
+        colorPrimary: true,
+        colorBg: true,
+        colorCard: true,
+        colorAccent: true,
+      },
+    });
+    if (!biz) throw new NotFoundException('Negocio no encontrado');
+    return biz;
+  }
+
+  updateBranding(
+    businessId: string,
+    data: Partial<{
+      bannerUrl: string;
+      logo: string;
+      colorPrimary: string;
+      colorBg: string;
+      colorCard: string;
+      colorAccent: string;
+    }>,
+  ) {
+    return this.prisma.business.update({ where: { id: businessId }, data });
+  }
 }

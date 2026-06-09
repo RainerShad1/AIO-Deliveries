@@ -6,6 +6,7 @@ export interface Business {
   slug: string;
   nombre: string;
   logo?: string | null;
+  bannerUrl?: string | null;
   colorPrimary: string;
   colorBg: string;
   colorCard: string;

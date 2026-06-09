@@ -1,8 +1,9 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/store/auth';
+import { api } from '@/lib/api';
 import Logo from '@/components/Logo';
 
 const NAV = [
@@ -11,6 +12,7 @@ const NAV = [
   { href: '/admin/deliverys', label: 'Deliverys', icon: '🛵' },
   { href: '/admin/clientes', label: 'Clientes', icon: '👥' },
   { href: '/admin/reports', label: 'Reportes', icon: '📈' },
+  { href: '/admin/negocio', label: 'Mi negocio', icon: '🎨' },
 ];
 
 export default function AdminLayout({
@@ -21,6 +23,7 @@ export default function AdminLayout({
   const { token, role, hydrated, logout } = useAuth();
   const router = useRouter();
   const path = usePathname();
+  const [bizName, setBizName] = useState('');
 
   useEffect(() => {
     // Esperar la rehidratacion antes de decidir redirigir
@@ -28,6 +31,14 @@ export default function AdminLayout({
     if (!token || (role !== 'ADMIN' && role !== 'SUPER_ADMIN'))
       router.replace('/login');
   }, [hydrated, token, role, router]);
+
+  useEffect(() => {
+    if (hydrated && token && role === 'ADMIN') {
+      api<{ nombre: string }>('/config/branding')
+        .then((b) => setBizName(b.nombre))
+        .catch(() => {});
+    }
+  }, [hydrated, token, role]);
 
   // Mientras rehidrata o si no es admin, no renderizamos el panel
   if (!hydrated) {
@@ -41,7 +52,7 @@ export default function AdminLayout({
         <div className="flex items-center gap-2 mb-2">
           <Logo size={36} />
           <div className="font-extrabold text-base hidden md:block leading-tight">
-            Empanadas<br />el Meneo
+            {bizName || 'Mi negocio'}
           </div>
         </div>
         {NAV.map((n) => (

@@ -36,6 +36,7 @@ model Business {
 
   // --- Branding por negocio (Fase 2 lo consumira en el frontend) ---
   logo      String?                    // url o ruta del logo
+  bannerUrl String?                    // imagen de portada de la tarjeta (URL)
   colorPrimary String @default("#FFD400")
   colorBg      String @default("#0B0B0F")
   colorCard    String @default("#15151D")
