@@ -1,9 +1,13 @@
 import {
   IsHexColor,
+  IsInt,
+  IsNumber,
   IsOptional,
   IsString,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
 } from 'class-validator';
 
@@ -49,4 +53,44 @@ export class CreateBusinessDto {
 export class UpdateBusinessDto {
   @IsOptional() @IsString() @MinLength(2) @MaxLength(80) nombre?: string;
   @IsOptional() activo?: boolean;
+  // White-label: visibilidad en el marketplace y grupo (cliente) al que pertenece
+  @IsOptional() enMarketplace?: boolean;
+  @IsOptional() @IsString() groupId?: string | null;
+}
+
+export class CreateGroupDto {
+  @IsString() @MinLength(2) @MaxLength(80) nombre: string;
+  @IsString()
+  @Matches(/^[a-z0-9]+(-[a-z0-9]+)*$/, {
+    message: 'slug invalido: minusculas, numeros y guiones',
+  })
+  @MaxLength(60)
+  slug: string;
+  @IsOptional() @IsString() @MaxLength(500) logo?: string;
+}
+
+export class RegisterPaymentDto {
+  @IsNumber()
+  @Min(0)
+  monto: number;
+
+  @IsInt()
+  @Min(1)
+  @Max(24)
+  meses: number;
+
+  @IsString()
+  @MinLength(2)
+  @MaxLength(40)
+  metodo: string; // "transferencia", "efectivo", etc.
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(300)
+  nota?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(30)
+  plan?: string; // opcional: actualizar la etiqueta del plan al cobrar
 }

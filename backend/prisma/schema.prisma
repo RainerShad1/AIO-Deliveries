@@ -34,6 +34,15 @@ model Business {
   nombre    String                     // "Super Empanada El Meneo"
   activo    Boolean  @default(true)    // el super-admin puede suspender un negocio
 
+  // --- White-label (Fase 5) ---
+  // enMarketplace: si aparece en la lista publica de AIO Deliverys. Un cliente
+  // white-label puro se oculta del marketplace pero sigue operando via su app.
+  enMarketplace Boolean @default(true)
+  // Grupo (cliente/dueno) al que pertenece. Un dueno con varios negocios los
+  // agrupa aqui y recibe UNA app propia que muestra solo SUS negocios.
+  group     ClientGroup? @relation(fields: [groupId], references: [id])
+  groupId   String?
+
   // --- Branding por negocio (Fase 2 lo consumira en el frontend) ---
   logo      String?                    // url o ruta del logo
   bannerUrl String?                    // imagen de portada de la tarjeta (URL)
@@ -46,6 +55,15 @@ model Business {
   horaApertura String  @default("09:00")  // formato HH:mm
   horaCierre   String  @default("22:00")
   abierto      Boolean @default(true)     // override manual de cierre
+
+  // --- Suscripcion (Fase 4) ---
+  // plan: etiqueta informativa ("BETA", "BASICO", "PRO"...).
+  // paidUntil: hasta cuando esta pagado. NULL = exento (beta/cortesia), no
+  // se suspende. Si tiene fecha y ya paso, el negocio se considera VENCIDO:
+  // desaparece de la lista publica y no acepta pedidos.
+  plan       String    @default("BETA")
+  paidUntil  DateTime?
+  payments   SubscriptionPayment[]
 
   // --- Numeracion de pedidos POR negocio ---
   // Contador propio para que PED-000001 sea independiente en cada negocio.
@@ -172,4 +190,34 @@ model OrderItem {
   productId  String
   cantidad   Int
   precioUnit Decimal @db.Decimal(10, 2) // snapshot del precio al momento del pedido
+}
+
+// Pago de suscripcion registrado manualmente por el Super-Admin
+// (transferencia, efectivo, etc.). Extiende el paidUntil del negocio.
+model SubscriptionPayment {
+  id         String   @id @default(uuid())
+  business   Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId String
+  monto      Decimal  @db.Decimal(10, 2)
+  meses      Int      // cuantos meses cubre este pago
+  metodo     String   // "transferencia", "efectivo", etc.
+  nota       String?
+  createdAt  DateTime @default(now())
+
+  @@index([businessId])
+}
+
+
+// El CLIENTE que paga por su app propia (white-label): un dueno con uno o
+// varios negocios. Su app (por slug o dominio propio) muestra solo sus
+// negocios, con su marca, sin rastro del marketplace.
+model ClientGroup {
+  id        String     @id @default(uuid())
+  slug      String     @unique  // acceso white-label: /app/<slug>
+  nombre    String              // "Grupo Perez"
+  logo      String?
+  dominio   String?    @unique  // dominio propio futuro (pedidos.cliente.com)
+  activo    Boolean    @default(true)
+  businesses Business[]
+  createdAt DateTime   @default(now())
 }

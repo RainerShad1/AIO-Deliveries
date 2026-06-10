@@ -5,6 +5,8 @@ import { api } from '@/lib/api';
 interface Branding {
   nombre: string;
   slug: string;
+  plan?: string;
+  paidUntil?: string | null;
   logo?: string | null;
   bannerUrl?: string | null;
   colorPrimary: string;
@@ -107,6 +109,29 @@ export default function MiNegocio() {
       <p className="text-muted text-sm mb-6">
         Personaliza como se ve {data.nombre} para tus clientes.
       </p>
+
+      {/* ===== Suscripcion (solo lectura para el admin) ===== */}
+      {data.paidUntil !== undefined && (
+        <div className="bg-card rounded-2xl p-4 mb-4 max-w-2xl text-sm">
+          {data.paidUntil === null ? (
+            <p className="text-blue-300">
+              Plan {data.plan || 'BETA'} — sin vencimiento (cortesia).
+            </p>
+          ) : new Date(data.paidUntil) < new Date() ? (
+            <p className="text-red-300 font-semibold">
+              ⚠️ Suscripcion vencida el{' '}
+              {new Date(data.paidUntil).toLocaleDateString('es-DO')}. Tu tienda
+              esta oculta para los clientes. Contacta a la plataforma para
+              renovar.
+            </p>
+          ) : (
+            <p className="text-green-300">
+              Plan {data.plan} — al dia. Vence el{' '}
+              {new Date(data.paidUntil).toLocaleDateString('es-DO')}.
+            </p>
+          )}
+        </div>
+      )}
 
       {/* ===== Estado y horario ===== */}
       {horario && (

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 130">
+  <circle cx="62" cy="65" r="56" fill="#0B0B0F"/>
+  <circle cx="62" cy="65" r="45" fill="none" stroke="#FFD400" stroke-width="7"/>
+  <path d="M46 51 Q62 43 78 57 Q74 77 56 85" fill="none" stroke="#FFD400" stroke-width="3" stroke-dasharray="0.1 8" stroke-linecap="round"/>
+  <circle cx="46" cy="51" r="6.5" fill="#ffffff"/>
+  <circle cx="78" cy="57" r="6.5" fill="#ffffff"/>
+  <circle cx="56" cy="85" r="6.5" fill="#ffffff"/>
+  <circle cx="56" cy="85" r="12" fill="none" stroke="#FFD400" stroke-width="2.5"/>
+  <path d="M140 96 L156 36 L172 96" fill="none" stroke="#ffffff" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+  <line x1="147" y1="73" x2="165" y2="73" stroke="#ffffff" stroke-width="8" stroke-linecap="round"/>
+  <line x1="192" y1="36" x2="192" y2="96" stroke="#ffffff" stroke-width="9" stroke-linecap="round"/>
+  <circle cx="238" cy="66" r="30" fill="none" stroke="#FFD400" stroke-width="9"/>
+  <text x="140" y="120" font-family="Arial, Helvetica, sans-serif" font-size="13" letter-spacing="6" fill="#FFD400">DELIVERYS</text>
+</svg>

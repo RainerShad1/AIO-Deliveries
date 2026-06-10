@@ -43,7 +43,10 @@ function MenuContent() {
 
   const activeBiz = useBusiness((s) => s.active);
   const setActiveBiz = useBusiness((s) => s.setActive);
+  const lockedApp = useBusiness((s) => s.lockedApp);
   const bizHydrated = useBusiness((s) => s.hydrated);
+  // White-label: "volver" regresa a la app del grupo, no al marketplace global
+  const backHref = lockedApp ? `/app/${lockedApp.slug}` : '/negocios';
 
   // Slug del negocio: de la URL, o del store si recargo sin query
   const slug = params.get('business') || activeBiz?.slug || '';
@@ -67,7 +70,7 @@ function MenuContent() {
   useEffect(() => {
     if (!bizHydrated) return; // espera a saber si hay negocio en store
     if (!slug) {
-      router.replace('/negocios');
+      router.replace(backHref);
       return;
     }
     setLoading(true);
@@ -136,7 +139,7 @@ function MenuContent() {
           Puede que ya no este disponible.
         </p>
         <button
-          onClick={() => router.replace('/negocios')}
+          onClick={() => router.replace(backHref)}
           className="btn-primary mt-6 max-w-xs mx-auto"
         >
           Ver negocios
@@ -151,9 +154,9 @@ function MenuContent() {
       <div className="bg-gradient-to-b from-primary/10 to-transparent px-4 pt-6 pb-2">
         <div className="flex items-center gap-3">
           <button
-            onClick={() => router.push('/negocios')}
+            onClick={() => router.push(backHref)}
             className="w-9 h-9 rounded-full bg-card flex items-center justify-center text-white shrink-0"
-            aria-label="Volver a negocios"
+            aria-label="Volver"
           >
             <ArrowLeft size={18} />
           </button>

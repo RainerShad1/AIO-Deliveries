@@ -10,8 +10,11 @@ export default function BottomNav() {
   const hydrated = useCart((s) => s.hydrated);
   const count = useCart((s) => s.count());
   const activeSlug = useBusiness((s) => s.active?.slug);
-  // "Menu" lleva al negocio activo; si no hay, a la lista de negocios.
-  const menuHref = activeSlug ? `/menu?business=${activeSlug}` : '/negocios';
+  const lockedApp = useBusiness((s) => s.lockedApp);
+  // "Menu" lleva al negocio activo; si no hay: a la app del grupo (white-label)
+  // o al marketplace, segun como entro el cliente.
+  const fallback = lockedApp ? `/app/${lockedApp.slug}` : '/negocios';
+  const menuHref = activeSlug ? `/menu?business=${activeSlug}` : fallback;
   const items = [
     { href: menuHref, label: 'Tienda', Icon: Home, match: '/menu' },
     { href: '/orders', label: 'Pedidos', Icon: ShoppingBag, match: '/orders' },

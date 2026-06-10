@@ -74,4 +74,72 @@ export class SuperadminService {
     if (!exists) throw new NotFoundException('Negocio no encontrado');
     return this.prisma.business.update({ where: { id }, data: dto });
   }
+
+  // ===== Suscripciones (Fase 4) =====
+
+  // Registra un pago manual (transferencia/efectivo) y extiende paidUntil:
+  // si el negocio esta al dia, suma desde su vencimiento; si ya vencio o
+  // nunca pago, suma desde HOY. Todo en una transaccion.
+  async registerPayment(
+    businessId: string,
+    dto: { monto: number; meses: number; metodo: string; nota?: string; plan?: string },
+  ) {
+    const biz = await this.prisma.business.findUnique({
+      where: { id: businessId },
+      select: { paidUntil: true },
+    });
+    if (!biz) throw new NotFoundException('Negocio no encontrado');
+
+    const now = new Date();
+    const base =
+      biz.paidUntil && biz.paidUntil > now ? new Date(biz.paidUntil) : now;
+    const nuevoVencimiento = new Date(base);
+    nuevoVencimiento.setMonth(nuevoVencimiento.getMonth() + dto.meses);
+
+    return this.prisma.$transaction(async (tx) => {
+      const payment = await tx.subscriptionPayment.create({
+        data: {
+          businessId,
+          monto: dto.monto,
+          meses: dto.meses,
+          metodo: dto.metodo,
+          nota: dto.nota,
+        },
+      });
+      const business = await tx.business.update({
+        where: { id: businessId },
+        data: {
+          paidUntil: nuevoVencimiento,
+          ...(dto.plan ? { plan: dto.plan } : {}),
+        },
+        select: { id: true, nombre: true, plan: true, paidUntil: true },
+      });
+      return { payment, business };
+    });
+  }
+
+  // ===== Grupos (white-label) =====
+  listGroups() {
+    return this.prisma.clientGroup.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: {
+        businesses: { select: { id: true, nombre: true, slug: true } },
+      },
+    });
+  }
+
+  async createGroup(dto: { nombre: string; slug: string; logo?: string }) {
+    const taken = await this.prisma.clientGroup.findUnique({
+      where: { slug: dto.slug },
+    });
+    if (taken) throw new ConflictException('Ese slug de grupo ya esta en uso');
+    return this.prisma.clientGroup.create({ data: dto });
+  }
+
+  listPayments(businessId: string) {
+    return this.prisma.subscriptionPayment.findMany({
+      where: { businessId },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 }

@@ -24,12 +24,14 @@ function abiertoAhora(b: Business): boolean {
 export default function Negocios() {
   const router = useRouter();
   const setActive = useBusiness((s) => s.setActive);
+  const setLockedApp = useBusiness((s) => s.setLockedApp);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Al entrar a la lista, volvemos a la paleta por defecto (no hay negocio activo)
   useEffect(() => {
     applyBranding(null);
+    setLockedApp(null); // entrar al marketplace global libera el encierro white-label
     api<Business[]>('/businesses')
       .then(setBusinesses)
       .catch(() => {})

@@ -6,8 +6,12 @@ import type { Business } from '@/types';
 // dentro de una tienda siga aplicando su branding y consultando su catalogo.
 interface BusinessState {
   active: Business | null;
+  // White-label: si la sesion entro por /app/<slug>, la navegacion queda
+  // encerrada en ese grupo (no se muestra el marketplace global).
+  lockedApp: { slug: string; nombre: string; logo?: string | null } | null;
   hydrated: boolean;
   setActive: (b: Business | null) => void;
+  setLockedApp: (g: BusinessState['lockedApp']) => void;
   setHydrated: (v: boolean) => void;
 }
 
@@ -15,8 +19,10 @@ export const useBusiness = create<BusinessState>()(
   persist(
     (set) => ({
       active: null,
+      lockedApp: null,
       hydrated: false,
       setActive: (b) => set({ active: b }),
+      setLockedApp: (g) => set({ lockedApp: g }),
       setHydrated: (v) => set({ hydrated: v }),
     }),
     {

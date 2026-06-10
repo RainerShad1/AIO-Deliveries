@@ -38,6 +38,8 @@ export class BusinessConfigService {
       select: {
         nombre: true,
         slug: true,
+        plan: true,
+        paidUntil: true,
         logo: true,
         bannerUrl: true,
         colorPrimary: true,

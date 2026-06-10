@@ -11,6 +11,13 @@ export class BusinessController {
     return this.business.findAllPublic();
   }
 
+  // Publico: la app white-label de un grupo (cliente) y sus negocios.
+  // IMPORTANTE: declarada ANTES de :slug para que no la capture esa ruta.
+  @Get('group/:slug')
+  getGroup(@Param('slug') slug: string) {
+    return this.business.getGroupPublic(slug);
+  }
+
   @Get(':slug') // publico: branding del negocio al entrar a su tienda
   getOne(@Param('slug') slug: string) {
     return this.business.getBySlugPublic(slug);

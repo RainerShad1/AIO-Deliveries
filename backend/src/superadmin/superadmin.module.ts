@@ -1,9 +1,12 @@
 import { Module } from '@nestjs/common';
 import { SuperadminService } from './superadmin.service';
-import { SuperadminController } from './superadmin.controller';
+import {
+  SuperadminController,
+  SuperadminGroupsController,
+} from './superadmin.controller';
 
 @Module({
-  controllers: [SuperadminController],
+  controllers: [SuperadminController, SuperadminGroupsController],
   providers: [SuperadminService],
 })
 export class SuperadminModule {}
