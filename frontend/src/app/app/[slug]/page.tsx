@@ -133,7 +133,23 @@ export default function WhiteLabelApp() {
                   style={{ background: b.colorPrimary }}
                 />
                 <div className="absolute inset-x-0 bottom-0 p-3 pl-4 flex items-center justify-between">
-                  <div className="min-w-0">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {b.logo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={b.logo}
+                        alt=""
+                        className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/20"
+                      />
+                    ) : (
+                      <span
+                        className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center font-extrabold text-black text-sm"
+                        style={{ background: b.colorPrimary }}
+                      >
+                        {b.nombre.charAt(0)}
+                      </span>
+                    )}
+                    <div className="min-w-0">
                     <p className="font-bold text-white truncate">{b.nombre}</p>
                     <div className="flex items-center gap-3 text-xs mt-1">
                       <span className="flex items-center gap-1">
@@ -150,6 +166,7 @@ export default function WhiteLabelApp() {
                         <Clock size={11} /> {to12h(b.horaApertura)}-
                         {to12h(b.horaCierre)}
                       </span>
+                    </div>
                     </div>
                   </div>
                   <ChevronRight size={20} className="text-gray-300 shrink-0" />

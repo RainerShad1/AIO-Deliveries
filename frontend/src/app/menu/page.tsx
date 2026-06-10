@@ -1,5 +1,5 @@
 'use client';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Search, Clock, ShoppingCart, ChevronRight, ArrowLeft } from 'lucide-react';
 import { api } from '@/lib/api';
@@ -25,6 +25,38 @@ function to12h(hhmm: string): string {
   const period = h >= 12 ? 'PM' : 'AM';
   const h12 = h % 12 === 0 ? 12 : h % 12;
   return `${h12}:${String(m).padStart(2, '0')} ${period}`;
+}
+
+// Avatar del negocio: logo si existe, inicial sobre su color si no.
+// Splash y header usan ESTE mismo componente para que el logo "aterrice"
+// sin ningun cambio visual.
+function BizAvatar({ biz, size }: { biz: Business; size: number }) {
+  if (biz.logo) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element
+      <img
+        src={biz.logo}
+        alt={biz.nombre}
+        width={size}
+        height={size}
+        className="rounded-xl object-cover"
+        style={{ width: size, height: size }}
+      />
+    );
+  }
+  return (
+    <span
+      className="rounded-xl flex items-center justify-center font-extrabold text-black"
+      style={{
+        width: size,
+        height: size,
+        background: biz.colorPrimary,
+        fontSize: size * 0.42,
+      }}
+    >
+      {biz.nombre.charAt(0)}
+    </span>
+  );
 }
 
 // useSearchParams exige un limite de Suspense en Next 14 App Router.
@@ -61,6 +93,14 @@ function MenuContent() {
   const [config, setConfig] = useState<ConfigResp | null>(null);
   const [nombre, setNombre] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  // Splash de entrada al negocio: 'show' (logo + spinner), 'dock' (el logo
+  // viaja a su lugar en el header), 'done' (menu normal).
+  const [splashPhase, setSplashPhase] = useState<'show' | 'dock' | 'done'>(
+    'show',
+  );
+  const splashLogoRef = useRef<HTMLDivElement>(null);
+  const headerLogoRef = useRef<HTMLSpanElement>(null);
+  const splashStartRef = useRef<number>(Date.now());
   const [notFound, setNotFound] = useState(false);
   const hydrated = useCart((s) => s.hydrated);
   const count = useCart((s) => s.count());
@@ -74,6 +114,8 @@ function MenuContent() {
       return;
     }
     setLoading(true);
+    setSplashPhase('show');
+    splashStartRef.current = Date.now();
     const q = `?business=${encodeURIComponent(slug)}`;
 
     // Branding del negocio (y aplicar colores)
@@ -106,6 +148,61 @@ function MenuContent() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [slug, bizHydrated]);
+
+  // Entrada del logo del splash (sube suave al montar)
+  useEffect(() => {
+    if (splashPhase !== 'show') return;
+    const node = splashLogoRef.current;
+    if (!node) return;
+    node.style.opacity = '0';
+    node.style.transform = 'translate(-50%, calc(-50% + 36px))';
+    const id = requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        node.style.transition =
+          'transform .55s cubic-bezier(.2,.8,.2,1), opacity .45s ease';
+        node.style.opacity = '1';
+        node.style.transform = 'translate(-50%, -50%)';
+      });
+    });
+    return () => cancelAnimationFrame(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [splashPhase, slug]);
+
+  // Acople: al terminar la carga (y tras un minimo para que la animacion se
+  // aprecie), el logo del splash viaja en UNA transicion continua hasta la
+  // posicion exacta del logo del header. Sin cortes: el header lo revela en
+  // el mismo pixel donde aterriza.
+  useEffect(() => {
+    if (loading || !biz || notFound || splashPhase !== 'show') return;
+    const reduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    if (reduced) {
+      setSplashPhase('done');
+      return;
+    }
+    const wait = Math.max(0, 900 - (Date.now() - splashStartRef.current));
+    const t = setTimeout(() => {
+      const node = splashLogoRef.current;
+      const target = headerLogoRef.current;
+      if (!node || !target) {
+        setSplashPhase('done');
+        return;
+      }
+      const from = node.getBoundingClientRect();
+      const to = target.getBoundingClientRect();
+      const dx = to.left + to.width / 2 - (from.left + from.width / 2);
+      const dy = to.top + to.height / 2 - (from.top + from.height / 2);
+      const scale = to.width / from.width;
+      setSplashPhase('dock');
+      requestAnimationFrame(() => {
+        node.style.transition = 'transform .6s cubic-bezier(.4,0,.2,1)';
+        node.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) scale(${scale})`;
+      });
+      setTimeout(() => setSplashPhase('done'), 640);
+    }, wait);
+    return () => clearTimeout(t);
+  }, [loading, biz, notFound, splashPhase]);
 
   // Filtrado por categoria + busqueda
   const filtered = products.filter((p) => {
@@ -150,6 +247,55 @@ function MenuContent() {
 
   return (
     <main className={`pb-28 ${showCartButton ? 'pb-40' : ''}`}>
+      {/* ===== Splash de entrada al negocio ===== */}
+      {splashPhase !== 'done' && (
+        <div
+          className="fixed inset-0 z-[70] pointer-events-none"
+          aria-hidden="true"
+        >
+          {/* Fondo del negocio: se desvanece cuando el logo viaja */}
+          <div
+            className="absolute inset-0"
+            style={{
+              background: 'var(--color-bg)',
+              opacity: splashPhase === 'dock' ? 0 : 1,
+              transition: 'opacity .45s ease .12s',
+            }}
+          />
+          {/* Logo: centrado, luego viaja al header en una sola transicion */}
+          <div
+            ref={splashLogoRef}
+            className="absolute"
+            style={{
+              left: '50%',
+              top: '38%',
+              transform: 'translate(-50%, -50%)',
+            }}
+          >
+            {biz ? (
+              <BizAvatar biz={biz} size={96} />
+            ) : (
+              <span className="block w-24 h-24 rounded-xl bg-card animate-pulse" />
+            )}
+          </div>
+          {/* Nombre + circulo de carga: se desvanecen al acoplar */}
+          <div
+            className="absolute inset-x-0 flex flex-col items-center gap-4"
+            style={{
+              top: '48%',
+              opacity: splashPhase === 'dock' ? 0 : 1,
+              transition: 'opacity .3s ease',
+            }}
+          >
+            <p className="text-lg font-extrabold">{biz?.nombre || ''}</p>
+            <span
+              className="w-7 h-7 rounded-full border-[3px] border-white/15 animate-spin"
+              style={{ borderTopColor: 'var(--color-primary)' }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* ===== Header ===== */}
       <div className="bg-gradient-to-b from-primary/10 to-transparent px-4 pt-6 pb-2">
         <div className="flex items-center gap-3">
@@ -160,16 +306,16 @@ function MenuContent() {
           >
             <ArrowLeft size={18} />
           </button>
-          {biz?.logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={biz.logo}
-              alt={biz.nombre}
-              className="w-11 h-11 rounded-xl object-cover shrink-0"
-            />
-          ) : (
-            <Logo size={44} />
-          )}
+          <span
+            ref={headerLogoRef}
+            className="shrink-0"
+            style={{
+              opacity: splashPhase === 'done' ? 1 : 0,
+              transition: 'opacity .15s',
+            }}
+          >
+            {biz ? <BizAvatar biz={biz} size={44} /> : <Logo size={44} />}
+          </span>
           <div className="min-w-0 flex-1">
             <h1 className="text-lg font-extrabold leading-tight truncate">
               {nombre ? `Hola, ${nombre} 👋` : biz?.nombre || 'Cargando...'}
