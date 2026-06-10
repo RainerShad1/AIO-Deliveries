@@ -23,12 +23,17 @@ export default function OrderTracking() {
     const socket = getSocket();
     if (!socket.connected) socket.connect();
     // Unirse a la sala personal para recibir cambios de estado
-    if (userId) socket.emit('join', `user:${userId}`);
+    const join = () => {
+      if (userId) socket.emit('join', `user:${userId}`);
+    };
+    join();
+    socket.on('connect', join); // re-join tras reconexion (red movil)
     const handler = (updated: Order) => {
       if (updated.id === id) setOrder(updated);
     };
     socket.on('order:status', handler);
     return () => {
+      socket.off('connect', join);
       socket.off('order:status', handler);
     };
   }, [id, userId]);

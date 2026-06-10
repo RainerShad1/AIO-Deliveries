@@ -28,8 +28,7 @@ export default function AdminLayout({
   useEffect(() => {
     // Esperar la rehidratacion antes de decidir redirigir
     if (!hydrated) return;
-    if (!token || (role !== 'ADMIN' && role !== 'SUPER_ADMIN'))
-      router.replace('/login');
+    if (!token || role !== 'ADMIN') router.replace('/login');
   }, [hydrated, token, role, router]);
 
   useEffect(() => {
@@ -44,7 +43,7 @@ export default function AdminLayout({
   if (!hydrated) {
     return <div className="p-6 text-muted">Cargando...</div>;
   }
-  if (!token || (role !== 'ADMIN' && role !== 'SUPER_ADMIN')) return null;
+  if (!token || role !== 'ADMIN') return null;
 
   return (
     <div className="min-h-screen md:flex">

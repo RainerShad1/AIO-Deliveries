@@ -17,12 +17,60 @@ export default function MiNegocio() {
   const [data, setData] = useState<Branding | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
+  // Estado/horario del negocio (interruptor abierto/cerrado manual)
+  const [horario, setHorario] = useState<{
+    horaApertura: string;
+    horaCierre: string;
+    abierto: boolean;
+  } | null>(null);
+  const [savingHorario, setSavingHorario] = useState(false);
+  const [msgHorario, setMsgHorario] = useState('');
 
   useEffect(() => {
     api<Branding>('/config/branding')
-      .then(setData)
+      .then((b) => {
+        setData(b);
+        // El horario publico se consulta por slug
+        return api<{
+          horaApertura: string;
+          horaCierre: string;
+          abierto: boolean;
+        }>(`/config?business=${b.slug}`);
+      })
+      .then((h) =>
+        setHorario({
+          horaApertura: h.horaApertura,
+          horaCierre: h.horaCierre,
+          abierto: h.abierto,
+        }),
+      )
       .catch(() => {});
   }, []);
+
+  const saveHorario = async (
+    patch?: Partial<{
+      horaApertura: string;
+      horaCierre: string;
+      abierto: boolean;
+    }>,
+  ) => {
+    if (!horario) return;
+    const next = { ...horario, ...patch };
+    setHorario(next);
+    setSavingHorario(true);
+    setMsgHorario('');
+    try {
+      await api('/config', {
+        method: 'PATCH',
+        body: JSON.stringify(next),
+      });
+      setMsgHorario('Guardado ✓');
+    } catch (e: any) {
+      setMsgHorario(e.message || 'Error al guardar');
+    } finally {
+      setSavingHorario(false);
+    }
+  };
 
   const set = (k: keyof Branding, v: string) =>
     setData((d) => (d ? { ...d, [k]: v } : d));
@@ -59,6 +107,71 @@ export default function MiNegocio() {
       <p className="text-muted text-sm mb-6">
         Personaliza como se ve {data.nombre} para tus clientes.
       </p>
+
+      {/* ===== Estado y horario ===== */}
+      {horario && (
+        <div className="bg-card rounded-2xl p-4 mb-6 max-w-2xl">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="font-semibold">
+                {horario.abierto ? '🟢 Tienda abierta' : '🔴 Tienda cerrada'}
+              </p>
+              <p className="text-muted text-xs mt-0.5">
+                {horario.abierto
+                  ? 'Recibiendo pedidos dentro del horario.'
+                  : 'Cierre manual: no se reciben pedidos aunque sea horario.'}
+              </p>
+            </div>
+            {/* Interruptor manual: abre/cierra fuera del horario automatico */}
+            <button
+              onClick={() => saveHorario({ abierto: !horario.abierto })}
+              disabled={savingHorario}
+              className={`relative w-14 h-8 rounded-full transition-colors shrink-0 ${
+                horario.abierto ? 'bg-green-500' : 'bg-white/15'
+              }`}
+              aria-label={horario.abierto ? 'Cerrar tienda' : 'Abrir tienda'}
+            >
+              <span
+                className={`absolute top-1 w-6 h-6 rounded-full bg-white transition-all ${
+                  horario.abierto ? 'left-7' : 'left-1'
+                }`}
+              />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div>
+              <label className="text-xs text-muted block mb-1">Abre a las</label>
+              <input
+                type="time"
+                className="input"
+                value={horario.horaApertura}
+                onChange={(e) =>
+                  setHorario({ ...horario, horaApertura: e.target.value })
+                }
+                onBlur={() => saveHorario()}
+              />
+            </div>
+            <div>
+              <label className="text-xs text-muted block mb-1">
+                Cierra a las
+              </label>
+              <input
+                type="time"
+                className="input"
+                value={horario.horaCierre}
+                onChange={(e) =>
+                  setHorario({ ...horario, horaCierre: e.target.value })
+                }
+                onBlur={() => saveHorario()}
+              />
+            </div>
+          </div>
+          {msgHorario && (
+            <p className="text-xs text-primary mt-2">{msgHorario}</p>
+          )}
+        </div>
+      )}
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Formulario */}

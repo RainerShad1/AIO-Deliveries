@@ -13,7 +13,11 @@ export default function Home() {
   useEffect(() => {
     if (hydrated && token) {
       router.replace(
-        role === 'ADMIN' || role === 'SUPER_ADMIN' ? '/admin' : '/negocios',
+        role === 'SUPER_ADMIN'
+          ? '/superadmin'
+          : role === 'ADMIN'
+            ? '/admin'
+            : '/negocios',
       );
     }
   }, [hydrated, token, role, router]);

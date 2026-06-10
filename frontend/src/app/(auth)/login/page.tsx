@@ -32,7 +32,11 @@ export default function Login() {
       const me = await api<{ id: string }>('/users/me');
       setSession(res.access_token, res.role, me.id, res.businessId);
       router.push(
-        res.role === 'ADMIN' || res.role === 'SUPER_ADMIN' ? '/admin' : '/menu',
+        res.role === 'SUPER_ADMIN'
+          ? '/superadmin'
+          : res.role === 'ADMIN'
+            ? '/admin'
+            : '/negocios',
       );
     } catch (e: any) {
       setError(e.message);

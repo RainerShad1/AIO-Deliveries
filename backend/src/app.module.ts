@@ -10,6 +10,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { OrdersModule } from './orders/orders.module';
 import { DeliveriesModule } from './deliveries/deliveries.module';
 import { BusinessConfigModule } from './config/config.module';
+import { SuperadminModule } from './superadmin/superadmin.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { BusinessConfigModule } from './config/config.module';
     OrdersModule,
     DeliveriesModule,
     BusinessConfigModule,
+    SuperadminModule,
   ],
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],
 })
