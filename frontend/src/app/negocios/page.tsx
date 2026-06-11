@@ -1,11 +1,12 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Clock, ChevronRight } from 'lucide-react';
+import { MapPin, Clock, ChevronRight, Search } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Business } from '@/types';
 import { useBusiness } from '@/store/business';
 import { applyBranding } from '@/lib/branding';
+import BottomNav from '@/components/BottomNav';
 
 // Convierte "23:00" -> "11:00 PM"
 function to12h(hhmm: string): string {
@@ -27,6 +28,8 @@ export default function Negocios() {
   const setLockedApp = useBusiness((s) => s.setLockedApp);
   const [businesses, setBusinesses] = useState<Business[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [searchOpen, setSearchOpen] = useState(false);
 
   // Al entrar a la lista, volvemos a la paleta por defecto (no hay negocio activo)
   useEffect(() => {
@@ -45,13 +48,40 @@ export default function Negocios() {
   };
 
   return (
-    <main className="pb-10">
-      <div className="px-5 pt-8 pb-4">
-        <h1 className="text-2xl font-extrabold">Negocios cerca de ti</h1>
-        <p className="text-muted text-sm mt-1 flex items-center gap-1">
-          <MapPin size={14} /> Elige donde quieres pedir
-        </p>
+    <main className="pb-28">
+      <div className="px-5 pt-8 pb-4 flex items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-extrabold">Negocios cerca de ti</h1>
+          <p className="text-muted text-sm mt-1 flex items-center gap-1">
+            <MapPin size={14} /> Elige donde quieres pedir
+          </p>
+        </div>
+        <button
+          onClick={() => setSearchOpen((v) => !v)}
+          className="w-10 h-10 rounded-full bg-card flex items-center justify-center shrink-0"
+          aria-label="Buscar negocios"
+        >
+          <Search size={19} />
+        </button>
       </div>
+
+      {searchOpen && (
+        <div className="px-4 pb-3 animate-fade-in">
+          <div className="relative">
+            <Search
+              size={17}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-muted"
+            />
+            <input
+              autoFocus
+              className="input pl-11"
+              placeholder="Buscar un negocio..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
 
       <div className="px-4 space-y-3">
         {loading ? (
@@ -64,7 +94,13 @@ export default function Negocios() {
           </p>
         ) : (
           <div className="space-y-3 stagger">
-            {businesses.map((b) => {
+            {businesses
+              .filter(
+                (b) =>
+                  !search ||
+                  b.nombre.toLowerCase().includes(search.toLowerCase()),
+              )
+              .map((b) => {
               const open = abiertoAhora(b);
               const horario = `${to12h(b.horaApertura)}-${to12h(b.horaCierre)}`;
               // Con banner: tarjeta tipo portada con imagen + degradado oscuro.
@@ -192,6 +228,7 @@ export default function Negocios() {
           </div>
         )}
       </div>
+      <BottomNav />
     </main>
   );
 }

@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import type { Business } from '@/types';
 import { useBusiness } from '@/store/business';
 import { applyBranding } from '@/lib/branding';
+import BottomNav from '@/components/BottomNav';
 
 interface GroupResp {
   slug: string;
@@ -76,7 +77,7 @@ export default function WhiteLabelApp() {
   if (!group) return <div className="p-6 text-muted">Cargando...</div>;
 
   return (
-    <main className="pb-10">
+    <main className="pb-28">
       {/* Cabecera con la marca del CLIENTE (no de AIO) */}
       <div className="px-5 pt-10 pb-5 flex flex-col items-center text-center">
         {group.logo ? (
@@ -176,6 +177,7 @@ export default function WhiteLabelApp() {
           })
         )}
       </div>
+      <BottomNav />
     </main>
   );
 }

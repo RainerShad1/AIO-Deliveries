@@ -1,10 +1,20 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { Product } from '@/types';
+import { useBusiness } from '@/store/business';
 
-interface CartLine {
+// Negocio dueno de cada linea: el carrito puede mezclar varios negocios y
+// se agrupa/envia por negocio (una orden por negocio seleccionado).
+export interface CartBiz {
+  id: string;
+  slug: string;
+  nombre: string;
+}
+
+export interface CartLine {
   product: Product;
   cantidad: number;
+  biz: CartBiz;
 }
 
 interface CartState {
@@ -14,6 +24,7 @@ interface CartState {
   remove: (id: string) => void;
   setQty: (id: string, qty: number) => void;
   clear: () => void;
+  clearSlugs: (slugs: string[]) => void; // vacia solo los negocios enviados
   total: () => number;
   count: () => number;
   setHydrated: (v: boolean) => void;
@@ -26,17 +37,24 @@ export const useCart = create<CartState>()(
       hydrated: false,
       add: (p) =>
         set((s) => {
+          // El negocio activo (la tienda que el cliente esta navegando) es
+          // el dueno de la linea. Sin negocio activo no se puede agregar.
+          const active = useBusiness.getState().active;
+          if (!active) return s;
+          const biz: CartBiz = {
+            id: active.id,
+            slug: active.slug,
+            nombre: active.nombre,
+          };
           const found = s.lines.find((l) => l.product.id === p.id);
           if (found) {
             return {
               lines: s.lines.map((l) =>
-                l.product.id === p.id
-                  ? { ...l, cantidad: l.cantidad + 1 }
-                  : l,
+                l.product.id === p.id ? { ...l, cantidad: l.cantidad + 1 } : l,
               ),
             };
           }
-          return { lines: [...s.lines, { product: p, cantidad: 1 }] };
+          return { lines: [...s.lines, { product: p, cantidad: 1, biz }] };
         }),
       remove: (id) =>
         set((s) => ({ lines: s.lines.filter((l) => l.product.id !== id) })),
@@ -50,6 +68,10 @@ export const useCart = create<CartState>()(
                 ),
         })),
       clear: () => set({ lines: [] }),
+      clearSlugs: (slugs) =>
+        set((s) => ({
+          lines: s.lines.filter((l) => !slugs.includes(l.biz.slug)),
+        })),
       total: () =>
         get().lines.reduce(
           (sum, l) => sum + Number(l.product.precio) * l.cantidad,
@@ -59,7 +81,8 @@ export const useCart = create<CartState>()(
       setHydrated: (v) => set({ hydrated: v }),
     }),
     {
-      name: 'empanadas-cart',
+      // Nombre nuevo: las lineas viejas (sin negocio) quedan descartadas.
+      name: 'aio-cart',
       onRehydrateStorage: () => (state) => {
         state?.setHydrated(true);
       },

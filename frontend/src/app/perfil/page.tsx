@@ -7,6 +7,7 @@ import type { Address } from '@/types';
 import BottomNav from '@/components/BottomNav';
 import Logo from '@/components/Logo';
 import LocationPicker from '@/components/LocationPicker';
+import AuthModal from '@/components/AuthModal';
 
 interface Profile {
   id: string;
@@ -30,6 +31,7 @@ export default function Perfil() {
   const [gps, setGps] = useState<{ lat?: number; lng?: number }>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [authOpen, setAuthOpen] = useState(true);
 
   const loadData = () => {
     Promise.all([
@@ -46,12 +48,9 @@ export default function Perfil() {
 
   useEffect(() => {
     if (!hydrated) return;
-    if (!token) {
-      router.replace('/login');
-      return;
-    }
-    loadData();
-  }, [hydrated, token, router]);
+    if (token) loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, token]);
 
   const addAddress = async () => {
     setError('');
@@ -94,6 +93,32 @@ export default function Perfil() {
 
   if (!hydrated || loading) {
     return <div className="p-6 text-muted">Cargando...</div>;
+  }
+
+  // Sin sesion: pequena interfaz para entrar o registrarse, sin sacarlo
+  // de la app (el modal flotante encima de una pantalla amigable).
+  if (hydrated && !token) {
+    return (
+      <main className="px-4 pt-16 max-w-md mx-auto text-center">
+        <div className="flex justify-center">
+          <Logo size={72} />
+        </div>
+        <h1 className="text-xl font-extrabold mt-4">Tu perfil</h1>
+        <p className="text-muted text-sm mt-2 mb-6">
+          Inicia sesion o crea tu cuenta para guardar tus direcciones y ver
+          tus pedidos.
+        </p>
+        <button onClick={() => setAuthOpen(true)} className="btn-primary">
+          Iniciar sesion / Registrarme
+        </button>
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          onSuccess={() => setAuthOpen(false)}
+        />
+        <BottomNav />
+      </main>
+    );
   }
 
   return (

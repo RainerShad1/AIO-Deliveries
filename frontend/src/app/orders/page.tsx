@@ -6,17 +6,26 @@ import type { Order, Product } from '@/types';
 import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
 import { useBusiness } from '@/store/business';
-import StatusBadge from '@/components/StatusBadge';
 import BottomNav from '@/components/BottomNav';
 
 export default function MyOrders() {
   const router = useRouter();
   const { token, hydrated } = useAuth();
-  const { add, clear } = useCart();
+  const { add } = useCart();
   const setActiveBiz = useBusiness((s) => s.setActive);
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [repeatMsg, setRepeatMsg] = useState('');
+  // Facturas desplegadas (ids de pedidos con "Ver mas" abierto)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+
+  const toggleExpand = (id: string) =>
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
 
   useEffect(() => {
     if (!hydrated) return;
@@ -48,20 +57,8 @@ export default function MyOrders() {
     }
     const activeMap = new Map(activeProducts.map((p) => [p.id, p]));
 
-    clear(); // carrito limpio con este pedido
-    let agregados = 0;
-    let omitidos = 0;
-    order.items.forEach((it) => {
-      const prod = activeMap.get(it.product.id);
-      if (prod) {
-        for (let i = 0; i < it.cantidad; i++) add(prod);
-        agregados++;
-      } else {
-        omitidos++;
-      }
-    });
-
-    // Activamos el negocio del pedido para que el menu aplique su branding
+    // IMPORTANTE: activar el negocio ANTES de agregar — el carrito firma cada
+    // linea con el negocio activo (carrito multi-negocio).
     if (order.business) {
       setActiveBiz({
         id: order.businessId || '',
@@ -77,6 +74,18 @@ export default function MyOrders() {
         abierto: true,
       });
     }
+
+    let agregados = 0;
+    let omitidos = 0;
+    order.items.forEach((it) => {
+      const prod = activeMap.get(it.product.id);
+      if (prod) {
+        for (let i = 0; i < it.cantidad; i++) add(prod);
+        agregados++;
+      } else {
+        omitidos++;
+      }
+    });
 
     if (agregados === 0) {
       setRepeatMsg('Ninguno de esos productos esta disponible ahora.');
@@ -100,45 +109,142 @@ export default function MyOrders() {
     ['ENTREGADO', 'CANCELADO'].includes(o.status),
   );
 
-  const renderOrder = (o: Order) => (
-    <div
-      key={o.id}
-      className="bg-card rounded-2xl p-4 transition-transform active:scale-[0.98]"
-    >
-      <div
-        className="flex justify-between items-center cursor-pointer"
-        onClick={() => router.push(`/orders/${o.id}`)}
-      >
-        <div>
-          <p className="font-semibold">{o.numero}</p>
-          {o.business && (
-            <p className="text-primary text-xs font-medium">
-              {o.business.nombre}
-            </p>
+  // Estado visual: icono + color por estado, visible sin abrir el pedido
+  const ESTADOS: Record<
+    string,
+    { icon: string; label: string; cls: string }
+  > = {
+    ENVIADO: {
+      icon: '🕐',
+      label: 'Enviado',
+      cls: 'bg-amber-500/15 text-amber-300',
+    },
+    EN_CAMINO: {
+      icon: '🛵',
+      label: 'En camino',
+      cls: 'bg-blue-500/15 text-blue-300',
+    },
+    ENTREGADO: {
+      icon: '✅',
+      label: 'Entregado',
+      cls: 'bg-green-500/15 text-green-300',
+    },
+    CANCELADO: {
+      icon: '❌',
+      label: 'Cancelado',
+      cls: 'bg-red-500/15 text-red-300',
+    },
+  };
+
+  const renderOrder = (o: Order) => {
+    const est = ESTADOS[o.status] || ESTADOS.ENVIADO;
+    const abierta = expanded.has(o.id);
+    const cantidadTotal = o.items.reduce((n, it) => n + it.cantidad, 0);
+    return (
+      <div key={o.id} className="bg-card rounded-2xl p-4">
+        {/* Cabecera: negocio + estado con icono */}
+        <div className="flex items-center gap-3">
+          {o.business?.logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={o.business.logo}
+              alt=""
+              className="w-10 h-10 rounded-xl object-cover shrink-0"
+            />
+          ) : (
+            <span className="w-10 h-10 rounded-xl bg-primary/20 text-primary font-extrabold flex items-center justify-center shrink-0">
+              {o.business?.nombre?.charAt(0) || '·'}
+            </span>
           )}
-          <p className="text-muted text-sm">
-            {o.items.length} producto{o.items.length !== 1 ? 's' : ''} · RD$
-            {o.total}
-          </p>
+          <div className="min-w-0 flex-1">
+            <p className="font-bold truncate">
+              {o.business?.nombre || 'Negocio'}
+            </p>
+            <p className="text-muted text-xs">
+              {o.numero} ·{' '}
+              {new Date(o.createdAt).toLocaleDateString('es-DO', {
+                day: 'numeric',
+                month: 'short',
+                hour: 'numeric',
+                minute: '2-digit',
+              })}
+            </p>
+          </div>
+          <span
+            className={`text-xs font-semibold rounded-lg px-2.5 py-1.5 shrink-0 ${est.cls}`}
+          >
+            {est.icon} {est.label}
+          </span>
         </div>
-        <StatusBadge status={o.status} />
+
+        {/* Resumen */}
+        <div className="flex items-center justify-between mt-3 text-sm">
+          <span className="text-muted">
+            {cantidadTotal} articulo{cantidadTotal !== 1 ? 's' : ''}
+          </span>
+          <span className="font-extrabold text-primary">RD${o.total}</span>
+        </div>
+
+        {/* Factura desplegable */}
+        {abierta && (
+          <div className="mt-3 bg-surface rounded-xl p-3 text-sm animate-fade-in">
+            <p className="text-muted text-xs font-bold mb-2">FACTURA</p>
+            {o.items.map((it) => (
+              <div
+                key={it.id}
+                className="flex justify-between py-1 border-b border-white/5 last:border-0"
+              >
+                <span className="min-w-0 pr-2 truncate">
+                  {it.cantidad}× {it.product.nombre}
+                </span>
+                <span className="text-muted shrink-0">
+                  RD$
+                  {(Number(it.precioUnit) * it.cantidad).toFixed(2)}
+                </span>
+              </div>
+            ))}
+            {o.nota && (
+              <p className="text-muted text-xs mt-2 italic">
+                Nota: {o.nota}
+              </p>
+            )}
+            {o.delivery && (
+              <p className="text-muted text-xs mt-1">
+                🛵 Repartidor: {o.delivery.nombre}
+              </p>
+            )}
+            <div className="flex justify-between font-bold mt-2 pt-2 border-t border-white/10">
+              <span>Total</span>
+              <span className="text-primary">RD${o.total}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Acciones */}
+        <div className="flex gap-2 mt-3">
+          <button
+            onClick={() => toggleExpand(o.id)}
+            className="flex-1 bg-surface border border-white/10 rounded-xl py-2.5 text-sm text-muted"
+          >
+            {abierta ? 'Ver menos ▴' : 'Ver mas ▾'}
+          </button>
+          <button
+            onClick={() => router.push(`/orders/${o.id}`)}
+            className="flex-1 bg-surface border border-white/10 rounded-xl py-2.5 text-sm text-muted"
+          >
+            Seguimiento
+          </button>
+          <button
+            onClick={() => repeatOrder(o)}
+            className="flex-1 bg-primary/15 text-primary rounded-xl py-2.5 text-sm font-semibold"
+          >
+            🔁 Repetir
+          </button>
+        </div>
       </div>
-      <div className="flex gap-2 mt-3">
-        <button
-          onClick={() => router.push(`/orders/${o.id}`)}
-          className="flex-1 bg-surface border border-white/10 rounded-xl py-2.5 text-sm text-muted"
-        >
-          Ver detalle
-        </button>
-        <button
-          onClick={() => repeatOrder(o)}
-          className="flex-1 bg-primary/15 text-primary rounded-xl py-2.5 text-sm font-semibold"
-        >
-          🔁 Repetir pedido
-        </button>
-      </div>
-    </div>
-  );
+    );
+  };
+
 
   return (
     <main className="px-4 pt-6">

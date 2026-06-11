@@ -16,14 +16,21 @@ export default function BottomNav() {
   const fallback = lockedApp ? `/app/${lockedApp.slug}` : '/negocios';
   const menuHref = activeSlug ? `/menu?business=${activeSlug}` : fallback;
   const items = [
-    { href: menuHref, label: 'Tienda', Icon: Home, match: '/menu' },
+    { href: menuHref, label: 'Tiendas', Icon: Home, match: '/menu' },
     { href: '/orders', label: 'Pedidos', Icon: ShoppingBag, match: '/orders' },
     { href: '/perfil', label: 'Perfil', Icon: User, match: '/perfil' },
   ];
   return (
     <nav className="fixed bottom-0 inset-x-0 z-40 bg-surface/80 backdrop-blur-xl border-t border-white/10 flex pb-[env(safe-area-inset-bottom)]">
       {items.map(({ href, label, Icon, match }) => {
-        const active = path.startsWith(match);
+        // "Tiendas" tambien esta activo en la lista de negocios y en las
+        // apps white-label, no solo dentro de un menu.
+        const active =
+          match === '/menu'
+            ? path.startsWith('/menu') ||
+              path.startsWith('/negocios') ||
+              path.startsWith('/app')
+            : path.startsWith(match);
         return (
           <Link
             key={match}
