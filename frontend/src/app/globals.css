@@ -2,16 +2,36 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ===== Branding dinamico (variables por negocio) =====
-   Valores por defecto = paleta base de la plataforma. Al entrar a la
-   tienda de un negocio, applyBranding() sobreescribe estas variables con sus
-   colores. Asi todos los bg-primary/text-primary se reciclan sin cambiar JSX. */
+/* ============================================================
+   AIO DELIVERYS — globals.css  (REDISEÑO Parte 1/2)
+   Capa visual únicamente. La lógica, el JSX y los nombres de
+   clase existentes (.btn-primary, .input, .skeleton, .stagger,
+   .animate-*, .check-path, .scrollbar-hide…) se conservan para
+   no romper ninguna pantalla. Solo se PULEN y se AGREGAN ayudas.
+
+   Regla de oro: theming dinámico. Todo color sale de las variables
+   --color-* (las reescribe applyBranding por negocio). No hay hex
+   fijos salvo estados semánticos (verde abierto, rojo cerrado…).
+   ============================================================ */
+
+/* ===== Branding dinámico (variables por negocio) =====
+   Valores por defecto = paleta base de la plataforma. */
 :root {
   --color-primary: #ffd400;
   --color-primary-dark: #e6bf00;
   --color-bg: #0b0b0f;
   --color-card: #15151d;
   --color-accent: #e53935;
+
+  /* Derivados (no se sobreescriben en runtime; se calculan de los de arriba) */
+  --surface-raised: #1e1e28;             /* filas anidadas, popovers */
+  --border-subtle: rgba(255, 255, 255, 0.10);
+  --border-strong: rgba(255, 255, 255, 0.20);
+  --radius-card: 1.5rem;                 /* 24px tarjetas/hojas */
+  --radius-control: 1rem;                /* 16px botones/inputs */
+
+  /* Glow de marca: única "elevación" de color bajo el CTA principal */
+  --glow-primary: 0 8px 24px color-mix(in srgb, var(--color-primary) 32%, transparent);
 }
 
 html,
@@ -19,80 +39,157 @@ body {
   background: var(--color-bg);
   color: #f5f5f7;
   -webkit-tap-highlight-color: transparent;
-  /* transicion suave al cambiar de negocio */
+  /* transición suave al cambiar de negocio */
   transition: background-color 0.3s ease;
 }
 
-/* Botones grandes touch-friendly */
+::selection {
+  background: var(--color-primary);
+  color: #0b0b0f;
+}
+
+/* Accesibilidad: foco visible consistente en toda la app */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+/* ============================================================
+   CONTROLES
+   ============================================================ */
+
+/* Botón principal — grande, touch-friendly, con glow y micro-press.
+   (Se conserva el nombre .btn-primary; el JSX no cambia.) */
 .btn-primary {
   @apply bg-primary active:bg-primary-dark text-black font-bold
          rounded-xl py-4 px-6 text-base w-full transition
+         active:scale-[0.98]
+         disabled:opacity-50 disabled:pointer-events-none;
+  box-shadow: var(--glow-primary);
+}
+.btn-primary:disabled {
+  box-shadow: none;
+}
+
+/* Botón secundario — superficie de tarjeta + borde fino */
+.btn-secondary {
+  @apply bg-card border border-white/10 text-white font-bold
+         rounded-xl py-4 px-6 text-base w-full transition
+         active:scale-[0.98] hover:border-white/20
          disabled:opacity-50 disabled:pointer-events-none;
 }
-.input {
-  @apply bg-card border border-white/10 rounded-xl py-3.5 px-4 w-full
-         text-white placeholder:text-muted focus:border-primary outline-none;
+
+/* Botón fantasma — para acciones terciarias */
+.btn-ghost {
+  @apply text-muted font-semibold rounded-xl py-3 px-4 transition
+         active:scale-[0.98] hover:text-white;
 }
 
-/* ===== Animaciones ===== */
+/* Botón destructivo — tinte rojo semántico (no se tematiza) */
+.btn-danger {
+  @apply font-bold rounded-xl py-4 px-6 text-base w-full transition
+         active:scale-[0.98]
+         disabled:opacity-50 disabled:pointer-events-none;
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
 
-/* Aparecer desde abajo con fade (tarjetas, listas) */
+/* Campo de texto — borde se enciende al color del negocio en foco */
+.input {
+  @apply bg-card border border-white/10 rounded-xl py-3.5 px-4 w-full
+         text-white placeholder:text-muted focus:border-primary outline-none
+         transition-colors;
+}
+
+/* Tarjeta base reutilizable — plana, radio grande, hairline.
+   Mismo recipe en cliente / admin / superadmin para consistencia total. */
+.card {
+  @apply bg-card border border-white/10 rounded-2xl;
+}
+.card-interactive {
+  @apply card transition active:scale-[0.99] cursor-pointer;
+}
+.card-selected {
+  border-color: color-mix(in srgb, var(--color-primary) 60%, transparent);
+  background: color-mix(in srgb, var(--color-primary) 6%, var(--color-card));
+}
+
+/* Botón redondo de íconos (volver, buscar, cerrar) */
+.icon-btn {
+  @apply w-10 h-10 rounded-full bg-card flex items-center justify-center
+         text-white shrink-0 transition active:scale-90;
+}
+
+/* ============================================================
+   MOTIVO DE MARCA — la ruta punteada (separadores, carga, progreso)
+   Los tres puntos del logo unidos por una ruta. Reúsalo.
+   ============================================================ */
+.route {
+  height: 3px;
+  background-image: radial-gradient(circle, var(--color-primary) 1.5px, transparent 1.6px);
+  background-size: 12px 3px;
+  background-repeat: repeat-x;
+  background-position: 0 center;
+}
+.route-muted {
+  background-image: radial-gradient(circle, rgba(255, 255, 255, 0.22) 1.5px, transparent 1.6px);
+}
+.route-loading {
+  height: 3px;
+  background-image:
+    radial-gradient(circle, var(--color-primary) 1.5px, transparent 1.6px),
+    radial-gradient(circle, color-mix(in srgb, var(--color-primary) 25%, transparent) 1.5px, transparent 1.6px);
+  background-size: 14px 3px, 14px 3px;
+  background-repeat: repeat-x, repeat-x;
+  animation: routeDash 1s linear infinite;
+}
+@keyframes routeDash {
+  to { background-position: 200px 0, 0 0; }
+}
+
+/* ============================================================
+   ANIMACIONES  (se conservan TODAS las existentes; no quitar)
+   ============================================================ */
+
 @keyframes fadeInUp {
   from { opacity: 0; transform: translateY(12px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.animate-fade-in-up {
-  animation: fadeInUp 0.4s ease both;
-}
+.animate-fade-in-up { animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-/* Fade simple */
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.animate-fade-in {
-  animation: fadeIn 0.3s ease both;
-}
+.animate-fade-in { animation: fadeIn 0.3s ease both; }
 
-/* Slide-up para hojas/modales (carrito) */
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }
 }
-.animate-slide-up {
-  animation: slideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.animate-slide-up { animation: slideUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-/* Fondo oscuro que aparece */
 @keyframes overlayIn {
   from { opacity: 0; }
   to   { opacity: 1; }
 }
-.animate-overlay-in {
-  animation: overlayIn 0.25s ease both;
-}
+.animate-overlay-in { animation: overlayIn 0.25s ease both; }
 
-/* Pop/rebote para el boton de agregar y badges */
 @keyframes pop {
   0%   { transform: scale(1); }
   40%  { transform: scale(1.25); }
   100% { transform: scale(1); }
 }
-.animate-pop {
-  animation: pop 0.3s ease;
-}
+.animate-pop { animation: pop 0.3s ease; }
 
-/* Pulso suave (badge del carrito) */
 @keyframes pulseOnce {
   0%   { transform: scale(1); }
   50%  { transform: scale(1.18); }
   100% { transform: scale(1); }
 }
-.animate-pulse-once {
-  animation: pulseOnce 0.35s ease;
-}
+.animate-pulse-once { animation: pulseOnce 0.35s ease; }
 
-/* Brillo de carga (skeletons) */
+/* Brillo de carga (skeletons) — ahora con radio por defecto */
 @keyframes shimmer {
   0%   { background-position: -400px 0; }
   100% { background-position: 400px 0; }
@@ -101,10 +198,11 @@ body {
   background: linear-gradient(90deg, #22222b 25%, #2c2c36 50%, #22222b 75%);
   background-size: 800px 100%;
   animation: shimmer 1.4s infinite linear;
+  border-radius: 1rem;
 }
 
-/* Util para escalonar la aparicion (delay por indice) */
-.stagger > * { opacity: 0; animation: fadeInUp 0.4s ease forwards; }
+/* Escalonar la aparición (delay por índice) */
+.stagger > * { opacity: 0; animation: fadeInUp 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 .stagger > *:nth-child(1) { animation-delay: 0.04s; }
 .stagger > *:nth-child(2) { animation-delay: 0.08s; }
 .stagger > *:nth-child(3) { animation-delay: 0.12s; }
@@ -114,19 +212,14 @@ body {
 .stagger > *:nth-child(7) { animation-delay: 0.28s; }
 .stagger > *:nth-child(8) { animation-delay: 0.32s; }
 
-/* ===== Animacion de "Pedido confirmado" ===== */
-
-/* El circulo principal aparece con rebote */
+/* ===== Animación de "Pedido confirmado" (sin cambios) ===== */
 @keyframes checkPop {
   0%   { transform: scale(0); opacity: 0; }
   60%  { transform: scale(1.15); opacity: 1; }
   100% { transform: scale(1); opacity: 1; }
 }
-.animate-check-pop {
-  animation: checkPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
+.animate-check-pop { animation: checkPop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both; }
 
-/* El "palomito" se dibuja */
 @keyframes drawCheck {
   from { stroke-dashoffset: 30; }
   to   { stroke-dashoffset: 0; }
@@ -137,23 +230,18 @@ body {
   animation: drawCheck 0.4s ease 0.35s forwards;
 }
 
-/* Anillo que se expande y desvanece */
 @keyframes ringExpand {
   0%   { transform: scale(1); opacity: 0.7; }
   100% { transform: scale(1.8); opacity: 0; }
 }
-.animate-ring {
-  animation: ringExpand 1s ease-out 0.3s infinite;
-}
+.animate-ring { animation: ringExpand 1s ease-out 0.3s infinite; }
 
-/* Ocultar scrollbar (pestanas de categorias) */
+/* Ocultar scrollbar (pestañas de categorías) */
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-hide::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-hide::-webkit-scrollbar { display: none; }
 
 /* Respeta la preferencia de accesibilidad: sin animaciones */
 @media (prefers-reduced-motion: reduce) {
@@ -164,7 +252,7 @@ body {
   }
 }
 
-/* FASE 5: estilos de impresion de ticket */
+/* FASE 5: estilos de impresión de ticket (sin cambios) */
 @media print {
   aside,
   nav,

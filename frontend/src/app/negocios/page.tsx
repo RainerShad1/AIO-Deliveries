@@ -1,12 +1,15 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin, Clock, ChevronRight, Search } from 'lucide-react';
+import { MapPin, Clock, ChevronRight, Search, Store } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Business } from '@/types';
 import { useBusiness } from '@/store/business';
 import { applyBranding } from '@/lib/branding';
 import BottomNav from '@/components/BottomNav';
+
+// REDISEÑO (Parte 2) — solo capa visual. Toda la lógica (carga, branding,
+// filtro de búsqueda, navegación, variantes con/sin banner) queda intacta.
 
 // Convierte "23:00" -> "11:00 PM"
 function to12h(hhmm: string): string {
@@ -47,18 +50,24 @@ export default function Negocios() {
     router.push(`/menu?business=${b.slug}`);
   };
 
+  const visibles = businesses.filter(
+    (b) => !search || b.nombre.toLowerCase().includes(search.toLowerCase()),
+  );
+
   return (
     <main className="pb-28">
       <div className="px-5 pt-8 pb-4 flex items-start justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-extrabold">Negocios cerca de ti</h1>
-          <p className="text-muted text-sm mt-1 flex items-center gap-1">
-            <MapPin size={14} /> Elige donde quieres pedir
+          <h1 className="text-2xl font-extrabold tracking-tight">
+            Negocios cerca de ti
+          </h1>
+          <p className="text-muted text-sm mt-1 flex items-center gap-1.5">
+            <MapPin size={14} /> Elige dónde quieres pedir
           </p>
         </div>
         <button
           onClick={() => setSearchOpen((v) => !v)}
-          className="w-10 h-10 rounded-full bg-card flex items-center justify-center shrink-0"
+          className="icon-btn"
           aria-label="Buscar negocios"
         >
           <Search size={19} />
@@ -85,22 +94,33 @@ export default function Negocios() {
 
       <div className="px-4 space-y-3">
         {loading ? (
-          [...Array(3)].map((_, i) => (
-            <div key={i} className="skeleton rounded-2xl h-28" />
-          ))
-        ) : businesses.length === 0 ? (
-          <p className="text-muted text-center py-10">
-            No hay negocios disponibles por ahora.
-          </p>
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div
+                key={i}
+                className="skeleton rounded-2xl h-32 flex items-end p-4"
+              >
+                <div className="route-loading w-2/3 opacity-60" />
+              </div>
+            ))}
+          </div>
+        ) : visibles.length === 0 ? (
+          <div className="flex flex-col items-center text-center py-16 animate-fade-in">
+            <span className="w-14 h-14 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-4">
+              <Store size={24} />
+            </span>
+            <p className="text-lg font-bold">
+              {search ? `No encontramos "${search}"` : 'No hay negocios aún'}
+            </p>
+            <p className="text-muted text-sm mt-1 max-w-xs">
+              {search
+                ? 'Prueba con otro nombre.'
+                : 'Vuelve pronto: estamos sumando negocios cerca de ti.'}
+            </p>
+          </div>
         ) : (
           <div className="space-y-3 stagger">
-            {businesses
-              .filter(
-                (b) =>
-                  !search ||
-                  b.nombre.toLowerCase().includes(search.toLowerCase()),
-              )
-              .map((b) => {
+            {visibles.map((b) => {
               const open = abiertoAhora(b);
               const horario = `${to12h(b.horaApertura)}-${to12h(b.horaCierre)}`;
               // Con banner: tarjeta tipo portada con imagen + degradado oscuro.
@@ -123,7 +143,7 @@ export default function Negocios() {
                       className="absolute inset-0"
                       style={{
                         background:
-                          'linear-gradient(to bottom, rgba(11,11,15,0.15) 0%, rgba(11,11,15,0.55) 45%, rgba(11,11,15,0.92) 100%)',
+                          'linear-gradient(to bottom, rgba(11,11,15,0.10) 0%, rgba(11,11,15,0.55) 45%, rgba(11,11,15,0.94) 100%)',
                       }}
                     />
                     {/* Franja de color del negocio */}
@@ -131,6 +151,21 @@ export default function Negocios() {
                       className="absolute left-1.5 top-1.5 bottom-1.5 w-1.5 rounded-full"
                       style={{ background: b.colorPrimary }}
                     />
+                    {/* Estado abierto/cerrado, esquina superior derecha */}
+                    <span
+                      className={`absolute top-3 right-3 text-[11px] font-semibold px-2.5 py-1 rounded-full backdrop-blur-sm flex items-center gap-1.5 ${
+                        open
+                          ? 'bg-green-500/20 text-green-300'
+                          : 'bg-red-500/20 text-red-300'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block w-1.5 h-1.5 rounded-full ${
+                          open ? 'bg-green-400' : 'bg-red-400'
+                        }`}
+                      />
+                      {open ? 'Abierto' : 'Cerrado'}
+                    </span>
                     <div className="absolute inset-x-0 bottom-0 p-3 pl-4 flex items-center justify-between">
                       <div className="flex items-center gap-2.5 min-w-0">
                         {b.logo ? (
@@ -138,35 +173,23 @@ export default function Negocios() {
                           <img
                             src={b.logo}
                             alt=""
-                            className="w-10 h-10 rounded-lg object-cover shrink-0 border border-white/20"
+                            className="w-11 h-11 rounded-xl object-cover shrink-0 border border-white/20"
                           />
                         ) : (
                           <span
-                            className="w-10 h-10 rounded-lg shrink-0 flex items-center justify-center font-extrabold text-black text-sm"
+                            className="w-11 h-11 rounded-xl shrink-0 flex items-center justify-center font-extrabold text-black text-base"
                             style={{ background: b.colorPrimary }}
                           >
                             {b.nombre.charAt(0)}
                           </span>
                         )}
                         <div className="min-w-0">
-                        <p className="font-bold text-white truncate">
-                          {b.nombre}
-                        </p>
-                        <div className="flex items-center gap-3 text-xs mt-1">
-                          <span className="flex items-center gap-1">
-                            <span
-                              className={`inline-block w-1.5 h-1.5 rounded-full ${
-                                open ? 'bg-green-400' : 'bg-red-400'
-                              }`}
-                            />
-                            <span className="text-gray-200">
-                              {open ? 'Abierto' : 'Cerrado'}
-                            </span>
-                          </span>
-                          <span className="flex items-center gap-1 text-gray-300">
+                          <p className="font-bold text-white truncate">
+                            {b.nombre}
+                          </p>
+                          <span className="flex items-center gap-1 text-xs text-gray-300 mt-1">
                             <Clock size={11} /> {horario}
                           </span>
-                        </div>
                         </div>
                       </div>
                       <ChevronRight size={20} className="text-gray-300 shrink-0" />

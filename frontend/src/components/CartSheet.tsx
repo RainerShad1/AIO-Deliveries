@@ -9,6 +9,10 @@ import type { Address, Order } from '@/types';
 import OrderConfirmed from '@/components/OrderConfirmed';
 import AuthModal from '@/components/AuthModal';
 
+// REDISEÑO (Parte 2) — solo capa visual. La agrupación por negocio, la
+// selección (máx. 2), el envío de UNA orden por negocio, direcciones, nota,
+// el aviso de pedido en proceso, auth y confirmación quedan idénticos.
+
 interface Group {
   slug: string;
   nombre: string;
@@ -201,6 +205,7 @@ export default function CartSheet({
       >
         <div
           className="bg-surface w-full rounded-t-2xl p-5 max-h-[85vh] overflow-y-auto animate-slide-up"
+          style={{ boxShadow: '0 -8px 40px rgba(0,0,0,0.55)' }}
           onClick={(e) => e.stopPropagation()}
         >
           <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-4" />
@@ -249,7 +254,10 @@ export default function CartSheet({
                   </span>
                 </button>
 
-                <div className="mt-2 pl-9">
+                {/* Línea de ruta (motivo de marca) separando cabecera de items */}
+                <div className="route route-muted my-2.5 ml-9" />
+
+                <div className="pl-9">
                   {g.lines.map((l) => (
                     <div
                       key={l.product.id}
@@ -259,23 +267,25 @@ export default function CartSheet({
                         <p className="font-medium text-sm truncate">
                           {l.product.nombre}
                         </p>
-                        <p className="text-muted text-xs">
+                        <p className="text-muted text-xs tabular-nums">
                           RD${l.product.precio}
                         </p>
                       </div>
                       <div className="flex items-center gap-2.5">
                         <button
                           onClick={() => setQty(l.product.id, l.cantidad - 1)}
-                          className="w-7 h-7 bg-card rounded-full text-sm"
+                          className="w-8 h-8 bg-card rounded-full text-base leading-none flex items-center justify-center active:scale-90 transition"
+                          aria-label="Quitar uno"
                         >
-                          -
+                          −
                         </button>
-                        <span className="w-5 text-center text-sm">
+                        <span className="w-5 text-center text-sm tabular-nums">
                           {l.cantidad}
                         </span>
                         <button
                           onClick={() => setQty(l.product.id, l.cantidad + 1)}
-                          className="w-7 h-7 bg-card rounded-full text-sm"
+                          className="w-8 h-8 bg-card rounded-full text-base leading-none flex items-center justify-center active:scale-90 transition"
+                          aria-label="Agregar uno"
                         >
                           +
                         </button>
@@ -325,7 +335,7 @@ export default function CartSheet({
 
           {error && <p className="text-primary text-sm mt-3">{error}</p>}
 
-          <div className="flex justify-between text-lg font-bold mt-4 mb-3">
+          <div className="flex justify-between items-center text-lg font-bold mt-4 mb-3">
             <span>
               Total{' '}
               {groups.length > 1 && (
@@ -334,7 +344,7 @@ export default function CartSheet({
                 </span>
               )}
             </span>
-            <span className="text-accent">
+            <span className="text-accent text-2xl font-extrabold tabular-nums">
               RD${totalSeleccionado.toFixed(2)}
             </span>
           </div>

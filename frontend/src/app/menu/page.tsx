@@ -13,6 +13,10 @@ import { useBusiness } from '@/store/business';
 import { useAuth } from '@/store/auth';
 import { applyBranding } from '@/lib/branding';
 
+// REDISEÑO (Parte 2) — solo capa visual. La carga, el branding, el filtrado y
+// TODA la animación del splash (logo sube + spinner → viaja al header) quedan
+// idénticas; solo se pulen clases (header, chips, pill del carrito, skeletons).
+
 interface ConfigResp {
   abiertoAhora: boolean;
   horaApertura: string;
@@ -278,7 +282,7 @@ function MenuContent() {
               <span className="block w-24 h-24 rounded-xl bg-card animate-pulse" />
             )}
           </div>
-          {/* Nombre + circulo de carga: se desvanecen al acoplar */}
+          {/* Nombre + ruta de carga (motivo de marca): se desvanecen al acoplar */}
           <div
             className="absolute inset-x-0 flex flex-col items-center gap-4"
             style={{
@@ -288,10 +292,7 @@ function MenuContent() {
             }}
           >
             <p className="text-lg font-extrabold">{biz?.nombre || ''}</p>
-            <span
-              className="w-7 h-7 rounded-full border-[3px] border-white/15 animate-spin"
-              style={{ borderTopColor: 'var(--color-primary)' }}
-            />
+            <div className="route-loading w-28" />
           </div>
         </div>
       )}
@@ -301,7 +302,7 @@ function MenuContent() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(backHref)}
-            className="w-9 h-9 rounded-full bg-card flex items-center justify-center text-white shrink-0"
+            className="w-9 h-9 rounded-full bg-card flex items-center justify-center text-white shrink-0 transition active:scale-90"
             aria-label="Volver"
           >
             <ArrowLeft size={18} />
@@ -345,7 +346,7 @@ function MenuContent() {
           </div>
           <button
             onClick={() => setSearchOpen((s) => !s)}
-            className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-white shrink-0"
+            className="w-10 h-10 rounded-full bg-card flex items-center justify-center text-white shrink-0 transition active:scale-90"
             aria-label="Buscar"
           >
             <Search size={20} />
@@ -405,7 +406,7 @@ function MenuContent() {
       <div className="px-4 mt-1">
         {loading ? (
           <div className="grid grid-cols-3 gap-2">
-            {[...Array(4)].map((_, i) => (
+            {[...Array(6)].map((_, i) => (
               <div key={i} className="skeleton rounded-2xl h-40" />
             ))}
           </div>
@@ -428,7 +429,7 @@ function MenuContent() {
       {showCartButton && (
         <button
           onClick={() => setCartOpen(true)}
-          className="fixed bottom-[78px] inset-x-5 bg-primary text-black rounded-full pl-3.5 pr-4 py-2 flex justify-between items-center z-30 animate-fade-in-up shadow-xl shadow-primary/30"
+          className="fixed bottom-[78px] inset-x-5 bg-primary text-black rounded-full pl-3.5 pr-4 py-2.5 flex justify-between items-center z-30 animate-fade-in-up shadow-xl shadow-primary/30 active:scale-[0.98] transition"
         >
           <span className="flex items-center gap-2.5">
             <span className="relative">
@@ -439,7 +440,7 @@ function MenuContent() {
             </span>
             <span className="font-bold text-sm">Ver pedido</span>
           </span>
-          <span className="flex items-center gap-0.5 font-extrabold text-sm">
+          <span className="flex items-center gap-0.5 font-extrabold text-sm tabular-nums">
             RD${total.toFixed(2)}
             <ChevronRight size={18} strokeWidth={2.6} />
           </span>
@@ -471,7 +472,7 @@ function CatChip({
   return (
     <button
       onClick={onClick}
-      className={`flex flex-col items-center justify-center gap-1 w-[64px] h-[64px] rounded-2xl transition-all shrink-0 ${
+      className={`flex flex-col items-center justify-center gap-1 w-[64px] h-[64px] rounded-2xl transition-all shrink-0 active:scale-95 ${
         active
           ? 'bg-card border-2 border-primary'
           : 'bg-card border-2 border-transparent'
