@@ -16,16 +16,16 @@ export default function ProductCard({ product }: { product: Product }) {
   };
 
   return (
-    <div className="flex items-stretch gap-3 bg-card border border-white/10 rounded-2xl p-3 transition active:scale-[0.99]">
+    <div className="flex items-center gap-2.5 bg-card border border-white/10 rounded-xl p-2 transition active:scale-[0.99]">
       {/* Izquierda: texto */}
       <div className="flex flex-col flex-1 min-w-0">
-        <h3 className="font-bold text-sm line-clamp-2">{product.nombre}</h3>
+        <h3 className="font-bold text-sm line-clamp-1">{product.nombre}</h3>
         {product.descripcion && (
-          <p className="text-xs text-muted line-clamp-2 mt-0.5">
+          <p className="text-[11px] text-muted line-clamp-1 mt-0.5">
             {product.descripcion}
           </p>
         )}
-        <p className="font-extrabold text-primary text-base tabular-nums mt-auto pt-2">
+        <p className="font-extrabold text-primary text-sm tabular-nums mt-1">
           <span className="text-[0.72em] align-[0.12em]">RD$</span>
           {product.precio}
         </p>
@@ -36,17 +36,17 @@ export default function ProductCard({ product }: { product: Product }) {
         <img
           src={product.imagen}
           alt={product.nombre}
-          className="w-24 h-24 rounded-xl object-cover bg-surface"
+          className="w-16 h-16 rounded-lg object-cover bg-surface"
         />
         <button
           onClick={handleAdd}
           onAnimationEnd={() => setPopping(false)}
-          className={`absolute -bottom-1.5 -right-1.5 w-8 h-8 rounded-full bg-primary text-black flex items-center justify-center shadow-lg shadow-primary/40 transition active:scale-90 ${
+          className={`absolute -bottom-1.5 -right-1.5 w-7 h-7 rounded-full bg-primary text-black flex items-center justify-center shadow-lg shadow-primary/40 transition active:scale-90 ${
             popping ? 'animate-pop' : ''
           }`}
           aria-label={`Agregar ${product.nombre}`}
         >
-          <Plus size={17} strokeWidth={3} />
+          <Plus size={15} strokeWidth={3} />
         </button>
       </div>
     </div>

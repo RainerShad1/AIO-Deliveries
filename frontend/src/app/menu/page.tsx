@@ -407,7 +407,7 @@ function MenuContent() {
         {loading ? (
           <div className="flex flex-col gap-2.5">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="skeleton rounded-2xl h-28" />
+              <div key={i} className="skeleton rounded-xl h-20" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
