@@ -1,7 +1,13 @@
 'use client';
 import { Suspense, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { Search, Clock, ShoppingCart, ChevronRight, ArrowLeft } from 'lucide-react';
+import {
+  Search, Clock, ShoppingCart, ChevronRight, ArrowLeft,
+  LayoutGrid, Cookie, GlassWater, Milk, Flame, Package,
+  Sparkles, Pizza, Sandwich, Coffee, IceCream, Beef, Salad,
+  Wine, UtensilsCrossed,
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Product, Category, Business } from '@/types';
 import ProductCard from '@/components/ProductCard';
@@ -220,17 +226,6 @@ function MenuContent() {
 
   const showCartButton = hydrated && count > 0 && config?.abiertoAhora;
 
-  // Emoji por categoria (visual, para los chips)
-  const catEmoji: Record<string, string> = {
-    Empanadas: '🥟',
-    Refrescos: '🥤',
-    Batidas: '🍓',
-    Salsas: '🌶️',
-    Combos: '📦',
-    Bebidas: '🥤',
-    Snacks: '🍪',
-    Limpieza: '🧼',
-  };
 
   if (notFound) {
     return (
@@ -386,7 +381,7 @@ function MenuContent() {
         <div className="flex gap-2 overflow-x-auto px-4 py-3 scrollbar-hide">
           <CatChip
             label="Todos"
-            emoji="🍽️"
+            icon={LayoutGrid}
             active={activeCat === 'all'}
             onClick={() => setActiveCat('all')}
           />
@@ -394,7 +389,7 @@ function MenuContent() {
             <CatChip
               key={cat.id}
               label={cat.nombre}
-              emoji={catEmoji[cat.nombre] || '🍴'}
+              icon={getCatIcon(cat.nombre)}
               active={activeCat === cat.id}
               onClick={() => setActiveCat(cat.id)}
             />
@@ -457,15 +452,33 @@ function MenuContent() {
   );
 }
 
+function getCatIcon(name: string): LucideIcon {
+  const n = name.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  if (n.includes('empanada') || n.includes('snack') || n.includes('galleta')) return Cookie;
+  if (n.includes('refresc') || n.includes('soda') || n.includes('agua')) return GlassWater;
+  if (n.includes('batida') || n.includes('jugo') || n.includes('smoothie')) return Milk;
+  if (n.includes('salsa') || n.includes('picante') || n.includes('aji')) return Flame;
+  if (n.includes('combo') || n.includes('paquete')) return Package;
+  if (n.includes('limpieza') || n.includes('limpie')) return Sparkles;
+  if (n.includes('pizza')) return Pizza;
+  if (n.includes('sandwich') || n.includes('sub') || n.includes('torta')) return Sandwich;
+  if (n.includes('cafe') || n.includes('coffee') || n.includes('te ') || n.includes('infus')) return Coffee;
+  if (n.includes('helado') || n.includes('postre') || n.includes('dulce')) return IceCream;
+  if (n.includes('carne') || n.includes('res') || n.includes('pollo') || n.includes('puerco')) return Beef;
+  if (n.includes('ensalada') || n.includes('vegetal') || n.includes('vegano')) return Salad;
+  if (n.includes('bebida') || n.includes('vino') || n.includes('cerveza')) return Wine;
+  return UtensilsCrossed;
+}
+
 // Chip de categoria estilo "tarjeta"
 function CatChip({
   label,
-  emoji,
+  icon: Icon,
   active,
   onClick,
 }: {
   label: string;
-  emoji: string;
+  icon: LucideIcon;
   active: boolean;
   onClick: () => void;
 }) {
@@ -478,7 +491,7 @@ function CatChip({
           : 'bg-card border-2 border-transparent'
       }`}
     >
-      <span className="text-2xl leading-none">{emoji}</span>
+      <Icon size={22} className={active ? 'text-primary' : 'text-white/70'} />
       <span
         className={`text-[10px] font-medium whitespace-nowrap ${
           active ? 'text-primary' : 'text-white'

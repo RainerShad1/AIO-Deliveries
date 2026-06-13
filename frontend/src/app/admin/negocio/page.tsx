@@ -2,6 +2,11 @@
 import { useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 
+const NEUTRAL_PRIMARY = '#9CA3AF';
+const FIXED_BG = '#0B0B0F';
+const FIXED_CARD = '#15151D';
+const FIXED_ACCENT = '#E53935';
+
 interface Branding {
   nombre: string;
   slug: string;
@@ -15,11 +20,49 @@ interface Branding {
   colorAccent: string;
 }
 
+async function extractBrandColor(url: string): Promise<string | null> {
+  if (!url) return null;
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    const timer = setTimeout(() => resolve(null), 5000);
+    img.onload = () => {
+      clearTimeout(timer);
+      try {
+        const SIZE = 32;
+        const canvas = document.createElement('canvas');
+        canvas.width = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(null); return; }
+        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        const { data } = ctx.getImageData(0, 0, SIZE, SIZE);
+        const freq: Record<string, number> = {};
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+          if (a < 128) continue;
+          const brightness = (r + g + b) / 3;
+          const saturation = Math.max(r, g, b) - Math.min(r, g, b);
+          if (brightness < 25 || brightness > 230 || saturation < 40) continue;
+          const key = `${Math.round(r / 24) * 24},${Math.round(g / 24) * 24},${Math.round(b / 24) * 24}`;
+          freq[key] = (freq[key] || 0) + 1;
+        }
+        const best = Object.entries(freq).sort((a, b) => b[1] - a[1])[0];
+        if (!best) { resolve(null); return; }
+        const [r, g, b] = best[0].split(',').map(Number);
+        resolve(`#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`);
+      } catch { resolve(null); }
+    };
+    img.onerror = () => { clearTimeout(timer); resolve(null); };
+    img.src = url;
+  });
+}
+
 export default function MiNegocio() {
   const [data, setData] = useState<Branding | null>(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
-  // Estado/horario del negocio (interruptor abierto/cerrado manual)
+  const [detecting, setDetecting] = useState(false);
   const [horario, setHorario] = useState<{
     horaApertura: string;
     horaCierre: string;
@@ -32,29 +75,34 @@ export default function MiNegocio() {
     api<Branding>('/config/branding')
       .then((b) => {
         setData(b);
-        // El horario publico se consulta por slug
-        return api<{
-          horaApertura: string;
-          horaCierre: string;
-          abierto: boolean;
-        }>(`/config?business=${b.slug}`);
+        return api<{ horaApertura: string; horaCierre: string; abierto: boolean }>(
+          `/config?business=${b.slug}`,
+        );
       })
-      .then((h) =>
-        setHorario({
-          horaApertura: h.horaApertura,
-          horaCierre: h.horaCierre,
-          abierto: h.abierto,
-        }),
-      )
+      .then((h) => setHorario({ horaApertura: h.horaApertura, horaCierre: h.horaCierre, abierto: h.abierto }))
       .catch(() => {});
   }, []);
 
+  // Auto-detect on initial load if logo exists
+  useEffect(() => {
+    if (!data?.logo) return;
+    runDetect(data.logo);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data?.logo]);
+
+  const runDetect = async (logoUrl: string) => {
+    if (!logoUrl) {
+      setData((d) => d ? { ...d, colorPrimary: NEUTRAL_PRIMARY } : d);
+      return;
+    }
+    setDetecting(true);
+    const color = await extractBrandColor(logoUrl);
+    setDetecting(false);
+    setData((d) => d ? { ...d, colorPrimary: color ?? NEUTRAL_PRIMARY } : d);
+  };
+
   const saveHorario = async (
-    patch?: Partial<{
-      horaApertura: string;
-      horaCierre: string;
-      abierto: boolean;
-    }>,
+    patch?: Partial<{ horaApertura: string; horaCierre: string; abierto: boolean }>,
   ) => {
     if (!horario) return;
     const next = { ...horario, ...patch };
@@ -62,10 +110,7 @@ export default function MiNegocio() {
     setSavingHorario(true);
     setMsgHorario('');
     try {
-      await api('/config', {
-        method: 'PATCH',
-        body: JSON.stringify(next),
-      });
+      await api('/config', { method: 'PATCH', body: JSON.stringify(next) });
       setMsgHorario('Guardado ✓');
     } catch (e: any) {
       setMsgHorario(e.message || 'Error al guardar');
@@ -88,9 +133,9 @@ export default function MiNegocio() {
           bannerUrl: data.bannerUrl || '',
           logo: data.logo || '',
           colorPrimary: data.colorPrimary,
-          colorBg: data.colorBg,
-          colorCard: data.colorCard,
-          colorAccent: data.colorAccent,
+          colorBg: FIXED_BG,
+          colorCard: FIXED_CARD,
+          colorAccent: FIXED_ACCENT,
         }),
       });
       setMsg('Guardado ✓');
@@ -110,19 +155,16 @@ export default function MiNegocio() {
         Personaliza como se ve {data.nombre} para tus clientes.
       </p>
 
-      {/* ===== Suscripcion (solo lectura para el admin) ===== */}
+      {/* ===== Suscripcion ===== */}
       {data.paidUntil !== undefined && (
         <div className="bg-card rounded-2xl p-4 mb-4 max-w-2xl text-sm">
           {data.paidUntil === null ? (
-            <p className="text-blue-300">
-              Plan {data.plan || 'BETA'} — sin vencimiento (cortesia).
-            </p>
+            <p className="text-blue-300">Plan {data.plan || 'BETA'} — sin vencimiento (cortesia).</p>
           ) : new Date(data.paidUntil) < new Date() ? (
             <p className="text-red-300 font-semibold">
               ⚠️ Suscripcion vencida el{' '}
               {new Date(data.paidUntil).toLocaleDateString('es-DO')}. Tu tienda
-              esta oculta para los clientes. Contacta a la plataforma para
-              renovar.
+              esta oculta para los clientes. Contacta a la plataforma para renovar.
             </p>
           ) : (
             <p className="text-green-300">
@@ -147,7 +189,6 @@ export default function MiNegocio() {
                   : 'Cierre manual: no se reciben pedidos aunque sea horario.'}
               </p>
             </div>
-            {/* Interruptor manual: abre/cierra fuera del horario automatico */}
             <button
               onClick={() => saveHorario({ abierto: !horario.abierto })}
               disabled={savingHorario}
@@ -171,30 +212,22 @@ export default function MiNegocio() {
                 type="time"
                 className="input"
                 value={horario.horaApertura}
-                onChange={(e) =>
-                  setHorario({ ...horario, horaApertura: e.target.value })
-                }
+                onChange={(e) => setHorario({ ...horario, horaApertura: e.target.value })}
                 onBlur={() => saveHorario()}
               />
             </div>
             <div>
-              <label className="text-xs text-muted block mb-1">
-                Cierra a las
-              </label>
+              <label className="text-xs text-muted block mb-1">Cierra a las</label>
               <input
                 type="time"
                 className="input"
                 value={horario.horaCierre}
-                onChange={(e) =>
-                  setHorario({ ...horario, horaCierre: e.target.value })
-                }
+                onChange={(e) => setHorario({ ...horario, horaCierre: e.target.value })}
                 onBlur={() => saveHorario()}
               />
             </div>
           </div>
-          {msgHorario && (
-            <p className="text-xs text-primary mt-2">{msgHorario}</p>
-          )}
+          {msgHorario && <p className="text-xs text-primary mt-2">{msgHorario}</p>}
         </div>
       )}
 
@@ -217,52 +250,45 @@ export default function MiNegocio() {
           </div>
 
           <div>
-            <label className="text-sm font-medium block mb-1">
-              Logo (opcional)
-            </label>
+            <label className="text-sm font-medium block mb-1">Logo (opcional)</label>
             <input
               className="input"
               placeholder="https://...logo.png"
               value={data.logo || ''}
               onChange={(e) => set('logo', e.target.value)}
+              onBlur={(e) => runDetect(e.target.value)}
             />
+            <div className="flex items-center gap-2 mt-1.5 min-h-[20px]">
+              {data.logo ? (
+                <>
+                  <span
+                    className="w-4 h-4 rounded-full border border-white/20 shrink-0"
+                    style={{ background: data.colorPrimary }}
+                  />
+                  <span className="text-xs text-muted">
+                    {detecting ? 'Detectando color...' : `Color principal: ${data.colorPrimary}`}
+                  </span>
+                </>
+              ) : (
+                <span className="text-xs text-muted">
+                  Sin logo — colores neutros
+                </span>
+              )}
+            </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <ColorField
-              label="Color principal"
-              value={data.colorPrimary}
-              onChange={(v) => set('colorPrimary', v)}
-            />
-            <ColorField
-              label="Color de acento"
-              value={data.colorAccent}
-              onChange={(v) => set('colorAccent', v)}
-            />
-            <ColorField
-              label="Fondo"
-              value={data.colorBg}
-              onChange={(v) => set('colorBg', v)}
-            />
-            <ColorField
-              label="Tarjetas"
-              value={data.colorCard}
-              onChange={(v) => set('colorCard', v)}
-            />
-          </div>
-
-          <button onClick={save} disabled={saving} className="btn-primary">
+          <button onClick={save} disabled={saving || detecting} className="btn-primary">
             {saving ? 'Guardando...' : 'Guardar cambios'}
           </button>
           {msg && <p className="text-sm text-primary">{msg}</p>}
         </div>
 
-        {/* Vista previa de la tarjeta tal como la vera el cliente */}
+        {/* Vista previa */}
         <div>
           <p className="text-sm font-medium mb-2">Vista previa</p>
           <div
             className="rounded-2xl overflow-hidden border border-white/10 relative h-32"
-            style={{ background: data.colorCard }}
+            style={{ background: FIXED_CARD }}
           >
             {data.bannerUrl && (
               // eslint-disable-next-line @next/next/no-img-element
@@ -297,39 +323,9 @@ export default function MiNegocio() {
             </div>
           </div>
           <p className="text-muted text-xs mt-2">
-            Asi aparece tu negocio en la lista. El degradado oscurece la parte
-            de abajo para que el texto se lea.
+            El color principal se extrae automaticamente de tu logo.
           </p>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function ColorField({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  return (
-    <div>
-      <label className="text-xs text-muted block mb-1">{label}</label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-9 h-9 rounded-lg bg-transparent border border-white/10 cursor-pointer shrink-0"
-        />
-        <input
-          className="input flex-1 text-xs"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-        />
       </div>
     </div>
   );

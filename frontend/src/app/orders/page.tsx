@@ -1,12 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ShoppingBag } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { Order, Product } from '@/types';
 import { useAuth } from '@/store/auth';
 import { useCart } from '@/store/cart';
 import { useBusiness } from '@/store/business';
 import BottomNav from '@/components/BottomNav';
+import AuthModal from '@/components/AuthModal';
 
 export default function MyOrders() {
   const router = useRouter();
@@ -18,6 +20,7 @@ export default function MyOrders() {
   const [repeatMsg, setRepeatMsg] = useState('');
   // Facturas desplegadas (ids de pedidos con "Ver mas" abierto)
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [authOpen, setAuthOpen] = useState(false);
 
   const toggleExpand = (id: string) =>
     setExpanded((prev) => {
@@ -30,14 +33,14 @@ export default function MyOrders() {
   useEffect(() => {
     if (!hydrated) return;
     if (!token) {
-      router.replace('/login');
+      setLoading(false);
       return;
     }
     api<Order[]>('/orders/mine')
       .then(setOrders)
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [hydrated, token, router]);
+  }, [hydrated, token]);
 
   const repeatOrder = async (order: Order) => {
     const slug = order.business?.slug;
@@ -245,6 +248,33 @@ export default function MyOrders() {
     );
   };
 
+
+  if (!hydrated) return <div className="p-6 text-muted">Cargando...</div>;
+
+  if (!token) {
+    return (
+      <main className="px-4 pt-16 max-w-md mx-auto text-center pb-28">
+        <ShoppingBag
+          size={60}
+          strokeWidth={1.5}
+          className="mx-auto text-primary mb-4"
+        />
+        <h1 className="text-xl font-extrabold">Tus pedidos</h1>
+        <p className="text-muted text-sm mt-2 mb-6">
+          Inicia sesion o crea tu cuenta para ver el historial de tus pedidos.
+        </p>
+        <button onClick={() => setAuthOpen(true)} className="btn-primary">
+          Iniciar sesion / Registrarme
+        </button>
+        <AuthModal
+          open={authOpen}
+          onClose={() => setAuthOpen(false)}
+          onSuccess={() => setAuthOpen(false)}
+        />
+        <BottomNav />
+      </main>
+    );
+  }
 
   return (
     <main className="px-4 pt-6">

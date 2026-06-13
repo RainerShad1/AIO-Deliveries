@@ -49,6 +49,7 @@ export default function Perfil() {
   useEffect(() => {
     if (!hydrated) return;
     if (token) loadData();
+    else setLoading(false);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, token]);
 
