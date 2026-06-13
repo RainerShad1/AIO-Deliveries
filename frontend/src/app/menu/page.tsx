@@ -293,7 +293,7 @@ function MenuContent() {
       )}
 
       {/* ===== Header ===== */}
-      <div className="bg-gradient-to-b from-primary/10 to-transparent px-4 pt-6 pb-2">
+      <div className="bg-card border-b border-white/10 px-4 pt-6 pb-3">
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push(backHref)}

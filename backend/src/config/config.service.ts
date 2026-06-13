@@ -18,7 +18,9 @@ export class BusinessConfigService {
       },
     });
     if (!biz) throw new NotFoundException('Negocio no encontrado');
-    const hhmm = new Date().toTimeString().slice(0, 5);
+    // DR is UTC-4 (no DST). Use offset instead of server local time.
+    const drDate = new Date(Date.now() - 4 * 60 * 60 * 1000);
+    const hhmm = drDate.toISOString().slice(11, 16);
     const abiertoAhora =
       biz.abierto && hhmm >= biz.horaApertura && hhmm <= biz.horaCierre;
     return { ...biz, abiertoAhora };
