@@ -405,9 +405,9 @@ function MenuContent() {
       {/* ===== Grid de productos ===== */}
       <div className="px-4 mt-1">
         {loading ? (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="flex flex-col gap-2.5">
             {[...Array(6)].map((_, i) => (
-              <div key={i} className="skeleton rounded-2xl h-40" />
+              <div key={i} className="skeleton rounded-2xl h-28" />
             ))}
           </div>
         ) : filtered.length === 0 ? (
@@ -417,7 +417,7 @@ function MenuContent() {
               : 'No hay productos en esta categoria.'}
           </p>
         ) : (
-          <div key={activeCat + search} className="grid grid-cols-3 gap-2 stagger">
+          <div key={activeCat + search} className="flex flex-col gap-2.5 stagger">
             {filtered.map((p) => (
               <ProductCard key={p.id} product={p} />
             ))}
