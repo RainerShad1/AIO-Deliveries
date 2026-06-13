@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { X } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAuth } from '@/store/auth';
@@ -25,6 +26,7 @@ export default function AuthModal({
   onSuccess: () => void;
 }) {
   const setSession = useAuth((s) => s.setSession);
+  const router = useRouter();
   const [mode, setMode] = useState<'login' | 'register'>('login');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -62,7 +64,11 @@ export default function AuthModal({
 
   const finish = (res: AuthResp, me: { id: string }) => {
     setSession(res.access_token, res.role, me.id, res.businessId);
-    onSuccess();
+    if (res.role === 'ADMIN' || res.role === 'SUPER_ADMIN') {
+      router.push('/admin');
+    } else {
+      onSuccess();
+    }
   };
 
   const doLogin = async () => {
